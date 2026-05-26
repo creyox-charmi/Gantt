@@ -9,7 +9,7 @@ export class UltimateGanttModel extends Model {
         this.data = await this.rpc("/web/dataset/call_kw", {
             model: params.resModel,
             method: "search_read",
-            args: [[], ["name", "planned_date_begin", "date_deadline", "baseline_start_date", "baseline_end_date", "actual_progress", "planned_progress", "timesheet_progress", "gantt_color", "wbs_number", "depend_on_ids"]],
+            args: [[], ["name", "planned_date_begin", "date_deadline", "baseline_start_date", "baseline_end_date", "actual_progress", "planned_progress", "timesheet_progress", "gantt_color", "wbs_number", "depend_on_ids", "inactive_dependency_ids"]],
             kwargs: {
                 domain: params.domain || [],
             },

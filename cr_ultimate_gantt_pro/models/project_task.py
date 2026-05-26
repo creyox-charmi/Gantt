@@ -60,6 +60,13 @@ class ProjectTask(models.Model):
     # Visual & Control Flags
     rollup = fields.Boolean("Rollup", default=False)
     inactive = fields.Boolean("Inactive", default=False)
+    inactive_dependency_ids = fields.Many2many(
+        'project.task',
+        'project_task_inactive_dependencies_rel',
+        'task_id',
+        'inactive_dependency_id',
+        string='Inactive Dependencies'
+    )
     is_milestone = fields.Boolean("Is Milestone", default=False)
     show_in_timeline = fields.Boolean("Show in Timeline", default=False)
     scheduling_direction = fields.Selection([('asap', 'As Soon As Possible'), ('alap', 'As Late As Possible')], string="Scheduling Direction", default='asap')

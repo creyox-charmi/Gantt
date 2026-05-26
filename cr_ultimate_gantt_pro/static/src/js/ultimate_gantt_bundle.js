@@ -36,12 +36,31 @@ export class UltimateGanttModel extends Model {
         const res = await this.orm.searchRead(params.resModel, params.domain || [], ["name", "date_start", "date", "ultimate_duration", "baseline_start_date", "baseline_end_date", "cost", "complexity"]);
         const pIds = res.map(p => p.id);
         let tasks = [];
-        if (pIds.length > 0) tasks = await this.orm.searchRead("project.task", [["project_id", "in", pIds]], ["name", "project_id", "planned_date_begin", "date_deadline", "actual_progress", "gantt_color", "depend_on_ids", "parent_id", "user_ids", "sequence", "stage_id", "baseline_start_date", "baseline_end_date", "baseline_duration", "effort", "scheduling_mode", "constraint_type", "constraint_date", "manually_scheduled", "rollup", "inactive", "calendar_id", "ignore_resource_calendar", "effort_driven", "project_border", "description", "cost", "complexity", "is_milestone"], { order: "sequence ASC" });
+        if (pIds.length > 0) tasks = await this.orm.searchRead("project.task", [["project_id", "in", pIds]], ["name", "project_id", "planned_date_begin", "date_deadline", "actual_progress", "gantt_color", "depend_on_ids", "inactive_dependency_ids", "parent_id", "user_ids", "sequence", "stage_id", "baseline_start_date", "baseline_end_date", "baseline_duration", "effort", "scheduling_mode", "constraint_type", "constraint_date", "manually_scheduled", "rollup", "inactive", "calendar_id", "ignore_resource_calendar", "effort_driven", "project_border", "description", "cost", "complexity", "is_milestone"], { order: "sequence ASC" });
         const allUsers = await this.orm.searchRead("res.users", [], ["name", "image_128"]);
         const allCalendars = await this.orm.searchRead("resource.calendar", [], ["name"]);
         this.allUsers = allUsers;
         this.allCalendars = allCalendars;
         this.allTasksList = tasks.map(t => ({ id: t.id, name: t.name }));
+        let dependencyMap = {};
+        if (tasks.length > 0) {
+            const allTaskIds = tasks.map(t => t.id);
+            try {
+                const depRecords = await this.orm.searchRead(
+                    "project.task.dependency", 
+                    [["task_id", "in", allTaskIds]], 
+                    ["task_id", "depends_on_id", "dependency_type", "lag"]
+                );
+                depRecords.forEach(d => {
+                    const tId = Array.isArray(d.task_id) ? d.task_id[0] : d.task_id;
+                    const pId = Array.isArray(d.depends_on_id) ? d.depends_on_id[0] : d.depends_on_id;
+                    dependencyMap[`${tId}_${pId}`] = (d.dependency_type || 'fs').toUpperCase();
+                });
+            } catch (err) {
+                console.error("Error loading task dependencies relation:", err);
+            }
+        }
+        this.dependencyMap = dependencyMap;
         const now = DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss");
         const uids = [...new Set(tasks.flatMap(t => t.user_ids || []))];
         let uMap = {}; if (uids.length > 0) { const users = await this.orm.searchRead("res.users", [["id", "in", uids]], ["name", "image_128"]); users.forEach(u => uMap[u.id] = u); }
@@ -90,6 +109,7 @@ export class UltimateGanttModel extends Model {
             return { ...p, id: `proj_${p.id}`, r_id: p.id, computed_wbs: (idx + 1).toString(), tasks: flat, planned_date_begin: pStart, date_deadline: pEnd, real_duration: p.ultimate_duration || "-", cost: pCost, complexity: pComplex };
         });
         this._computeCP();
+        this.allTasksList = this.data.flatMap(p => p.tasks || []).map(t => ({ id: t.id, name: t.name, computed_wbs: t.computed_wbs }));
         return this.data;
     }
     _computeCP() {
@@ -213,7 +233,34 @@ export class UltimateGanttRenderer extends Component {
                 .o_ug_baseline_summary { height: 6px; background: rgba(0,0,0,0.1) !important; z-index: 4; position: absolute; bottom: -8px; clip-path: polygon(0% 0%, 100% 0%, 100% 100%, calc(100% - 6px) 50%, 6px 50%, 0% 100%); }
 
 
-                .o_ug_modal_overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 5000; animation: fadeIn 0.2s ease-out; }
+                .o_ug_modal_overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.45); -webkit-backdrop-filter: blur(8px) !important; backdrop-filter: blur(8px) !important; display: flex; align-items: center; justify-content: center; z-index: 5000; animation: fadeIn 0.2s ease-out; }
+                .o_ug_custom_dropdown_menu { border: 1px solid #cbd5e1 !important; border-radius: 8px !important; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important; background: #ffffff !important; font-family: inherit; animation: o_ug_dropdown_in 0.15s ease-out; }
+                @keyframes o_ug_dropdown_in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+                .o_ug_custom_dropdown_item { font-size: 13px !important; color: #334155 !important; padding: 8px 16px !important; transition: all 0.15s ease; display: flex; align-items: center; justify-content: space-between; text-align: left; }
+                .o_ug_custom_dropdown_item:hover { background-color: #f1f5f9 !important; color: #0f172a !important; }
+                .o_ug_custom_dropdown_item.active { background-color: #f1f5f9 !important; color: #71639e !important; font-weight: 600; }
+                .o_ug_type_select {
+                    background-color: #f8fafc !important;
+                    border: 1px solid #e2e8f0 !important;
+                    border-radius: 8px !important;
+                    padding: 6px 12px !important;
+                    font-size: 13px !important;
+                    font-weight: 500 !important;
+                    color: #475569 !important;
+                    cursor: pointer !important;
+                    transition: all 0.2s ease !important;
+                    outline: none !important;
+                    display: inline-block;
+                }
+                .o_ug_type_select:hover {
+                    border-color: #cbd5e1 !important;
+                    background-color: #f1f5f9 !important;
+                    color: #1e293b !important;
+                }
+                .o_ug_type_select:focus {
+                    border-color: #71639e !important;
+                    box-shadow: 0 0 0 3px rgba(113,99,158,0.1) !important;
+                }
                 .o_ug_modal { background: white; border-radius: 12px; width: 750px; max-width: 95vw; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); display: flex; flex-direction: column; overflow: hidden; animation: o_ug_modal_in 0.25s cubic-bezier(0,0,0.2,1); }
                 @keyframes o_ug_modal_in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
                 .o_ug_modal_header { padding: 20px 24px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; background: #fff; }
@@ -236,7 +283,7 @@ export class UltimateGanttRenderer extends Component {
                 .o_ug_table td { padding: 10px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #1e293b; }
 
                 .o_ug_modal_header { padding: 20px 24px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
-                .o_ug_modal_body { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+                .o_ug_modal_body { padding: 24px; display: flex; flex-direction: column; gap: 20px; min-height: 480px; height: 480px; overflow: visible; }
                 .o_ug_modal_footer { padding: 16px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; gap: 12px; justify-content: flex-end; }
                 .o_ug_input_group { display: flex; flex-direction: column; gap: 6px; }
                 .o_ug_input_label { font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -1014,8 +1061,9 @@ export class UltimateGanttRenderer extends Component {
                             <defs>
                                 <marker id="ugp-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#94a3b8"/></marker>
                                 <marker id="ugp-arrow-crit" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#d9534f"/></marker>
+                                <marker id="ugp-arrow-inactive" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#cbd5e1"/></marker>
                             </defs>
-                            <t t-foreach="this.depLines" t-as="dl" t-key="dl.id"><path t-att-d="dl.path" fill="none" t-att-stroke="dl.isCritical ? '#d9534f' : '#94a3b8'" stroke-width="1.2" t-att-marker-end="dl.isCritical ? 'url(#ugp-arrow-crit)' : 'url(#ugp-arrow)'"/></t>
+                            <t t-foreach="this.depLines" t-as="dl" t-key="dl.id"><path t-att-d="dl.path" fill="none" t-att-stroke="dl.isInactive ? '#cbd5e1' : (dl.isCritical ? '#d9534f' : '#94a3b8')" t-att-stroke-dasharray="dl.isInactive ? '4' : '0'" stroke-width="1.2" t-att-marker-end="dl.isInactive ? 'url(#ugp-arrow-inactive)' : (dl.isCritical ? 'url(#ugp-arrow-crit)' : 'url(#ugp-arrow)')"/></t>
                         </svg>
 
                         <t t-foreach="this.visibleProjects" t-as="p" t-key="'tl_p_'+p.id">
@@ -1073,7 +1121,7 @@ export class UltimateGanttRenderer extends Component {
                  <!-- ADVANCED TASK EDITOR MODAL -->
                  <t t-if="state.editorTask">
                     <div class="o_ug_modal_overlay" t-on-click="this.closeEditor">
-                        <div class="o_ug_modal" t-on-click.stop="">
+                        <div class="o_ug_modal" t-on-click.stop="() => { state.openPredDropdownId = null; state.openSuccDropdownId = null; state.openPredTypeDropdownId = null; state.openSuccTypeDropdownId = null; }">
                             <div class="o_ug_modal_header">
                                 <h5 class="m-0 fw-bold text-dark"><i class="fa fa-info-circle me-2 text-primary"/> Task Information</h5>
                                 <button class="btn-close" t-on-click="this.closeEditor"/>
@@ -1165,54 +1213,184 @@ export class UltimateGanttRenderer extends Component {
                                 </t>
 
                                 <t t-if="state.editorTab === 'predecessors'">
-                                    <div class="d-flex flex-column h-100">
-                                        <div class="flex-grow-1 overflow-auto" style="max-height: 300px;">
-                                            <table class="o_ug_table">
-                                                <thead><tr><th>Name</th><th>Type</th><th>Lag</th><th style="width:50px;"></th></tr></thead>
-                                                <tbody>
-                                                    <t t-foreach="state.editorTask._preds" t-as="pId" t-key="pId">
-                                                        <t t-set="pT" t-value="this.props.model.allTasksList.find(x=>x.id===pId)"/>
-                                                        <tr>
-                                                            <td>
-                                                                <select class="form-select form-select-sm border-0 bg-transparent" t-on-change="(ev) => this.updatePredecessor(pId, ev.target.value)">
-                                                                    <t t-foreach="this.props.model.allTasksList" t-as="ot" t-key="ot.id">
-                                                                        <option t-att-value="ot.id" t-att-selected="ot.id === pId"><t t-esc="ot.name"/></option>
-                                                                    </t>
-                                                                </select>
-                                                            </td>
-                                                            <td><span class="badge bg-light text-muted">FS</span></td>
-                                                            <td>0d</td>
-                                                            <td class="text-center"><i class="fa fa-trash-o text-danger cursor-pointer" t-on-click="() => this.delPred(pId)"/></td>
-                                                        </tr>
-                                                    </t>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        <div class="mt-3">
-                                            <button class="btn btn-light btn-sm border fw-bold px-3" t-on-click="this.addPred"><i class="fa fa-plus me-1 text-success"/> ADD PREDECESSOR</button>
-                                        </div>
-                                    </div>
-                                </t>
+                                     <div class="d-flex flex-column h-100" style="overflow: visible !important;">
+                                         <div class="flex-grow-1" style="max-height: 300px; overflow: visible !important;">
+                                              <table class="o_ug_table" style="table-layout: fixed; width: 100%; overflow: visible !important;">
+                                                 <thead>
+                                                     <tr>
+                                                         <th style="width: 320px; padding: 10px;">Name</th>
+                                                         <th style="width: 220px; padding: 10px;">Type</th>
+                                                         <th style="width: 90px; padding: 10px;">Lag</th>
+                                                         <th style="width: 80px; padding: 10px;" class="text-center">Active</th>
+                                                         <th style="width: 50px; padding: 10px;"></th>
+                                                     </tr>
+                                                 </thead>
+                                                 <tbody>
+                                                     <t t-foreach="state.editorTask._preds" t-as="pId" t-key="pId">
+                                                         <t t-set="pT" t-value="this.props.model.allTasksList.find(x=>x.id===pId)"/>
+                                                         <tr>
+                                                             <td style="overflow: visible !important;">
+                                                                  <div class="position-relative w-100 h-100" style="overflow: visible !important;">
+                                                                     <div class="d-flex align-items-center justify-content-between px-2 w-100 h-100 cursor-pointer" 
+                                                                          style="min-height: 36px;"
+                                                                          t-on-click.stop="() => this.togglePredDropdown(pId)">
+                                                                          <span class="text-truncate text-dark" style="font-size: 13px;">
+                                                                              <t t-esc="pT ? pT.name : 'Select Task'"/>
+                                                                              <t t-if="pT">
+                                                                                  <t t-if="pT.computed_wbs"> (<t t-esc="pT.computed_wbs"/>)</t>
+                                                                              </t>
+                                                                          </span>
+                                                                          <i class="fa fa-caret-down text-muted ms-1" style="font-size: 11px;"/>
+                                                                     </div>
+                                                                     <div t-if="state.openPredDropdownId === pId" 
+                                                                          class="position-absolute bg-white border rounded shadow-lg py-1 mt-1 w-100 o_ug_custom_dropdown_menu"
+                                                                          style="top: 100%; left: 0; z-index: 1050; max-height: 200px; overflow-y: auto;">
+                                                                          <t t-foreach="this.props.model.allTasksList" t-as="ot" t-key="ot.id">
+                                                                              <div class="px-3 py-2 cursor-pointer o_ug_custom_dropdown_item"
+                                                                                   t-att-class="ot.id === pId ? 'active' : ''"
+                                                                                   t-on-click.stop="() => this.selectPredecessor(pId, ot.id)">
+                                                                                   <t t-esc="ot.name"/>
+                                                                                   <t t-if="ot.computed_wbs"> (<t t-esc="ot.computed_wbs"/>)</t>
+                                                                              </div>
+                                                                          </t>
+                                                                     </div>
+                                                                 </div>
+                                                             </td>
+                                                             <td style="overflow: visible !important; padding: 4px 8px !important;">
+                                                                  <div class="position-relative w-100 h-100" style="overflow: visible !important;">
+                                                                      <div class="d-flex align-items-center justify-content-between px-2 w-100 h-100 cursor-pointer o_ug_type_select shadow-none" 
+                                                                           style="min-height: 36px;"
+                                                                           t-on-click.stop="() => this.togglePredTypeDropdown(pId)">
+                                                                           <span class="text-truncate text-dark" style="font-size: 13px;">
+                                                                               <t t-if="this.getPredType(pId) === 'FS'">Finish-to-Start (FS)</t>
+                                                                               <t t-elif="this.getPredType(pId) === 'SS'">Start-to-Start (SS)</t>
+                                                                               <t t-elif="this.getPredType(pId) === 'FF'">Finish-to-Finish (FF)</t>
+                                                                               <t t-elif="this.getPredType(pId) === 'SF'">Start-to-Finish (SF)</t>
+                                                                               <t t-else="">Finish-to-Start (FS)</t>
+                                                                           </span>
+                                                                           <i class="fa fa-caret-down text-muted ms-1" style="font-size: 11px;"/>
+                                                                      </div>
+                                                                      <div t-if="state.openPredTypeDropdownId === pId" 
+                                                                           class="position-absolute bg-white border rounded shadow-lg py-1 mt-1 w-100 o_ug_custom_dropdown_menu"
+                                                                           style="top: 100%; left: 0; z-index: 1050; max-height: 200px; overflow-y: auto;">
+                                                                           <div class="px-3 py-2 cursor-pointer o_ug_custom_dropdown_item" t-att-class="this.getPredType(pId) === 'FS' ? 'active' : ''" t-on-click.stop="() => this.selectPredType(pId, 'FS')">Finish-to-Start (FS)</div>
+                                                                           <div class="px-3 py-2 cursor-pointer o_ug_custom_dropdown_item" t-att-class="this.getPredType(pId) === 'SS' ? 'active' : ''" t-on-click.stop="() => this.selectPredType(pId, 'SS')">Start-to-Start (SS)</div>
+                                                                           <div class="px-3 py-2 cursor-pointer o_ug_custom_dropdown_item" t-att-class="this.getPredType(pId) === 'FF' ? 'active' : ''" t-on-click.stop="() => this.selectPredType(pId, 'FF')">Finish-to-Finish (FF)</div>
+                                                                           <div class="px-3 py-2 cursor-pointer o_ug_custom_dropdown_item" t-att-class="this.getPredType(pId) === 'SF' ? 'active' : ''" t-on-click.stop="() => this.selectPredType(pId, 'SF')">Start-to-Finish (SF)</div>
+                                                                      </div>
+                                                                  </div>
+                                                             </td>
+                                                             <td>0d</td>
+                                                             <td class="text-center" style="vertical-align: middle;">
+                                                                  <input type="checkbox" class="form-check-input mt-0" style="cursor: pointer;"
+                                                                         t-att-checked="!state.editorTask._inactive_preds.includes(pId)"
+                                                                         t-on-change="(ev) => this.toggleActivePred(pId, ev.target.checked)"/>
+                                                              </td>
+                                                              <td class="text-center"><i class="fa fa-trash-o text-danger cursor-pointer" t-on-click="() => this.delPred(pId)"/></td>
+                                                         </tr>
+                                                     </t>
+                                                 </tbody>
+                                             </table>
+                                         </div>
+                                         <div class="mt-3">
+                                             <button class="btn btn-light btn-sm border fw-bold px-3" t-on-click="this.addPred"><i class="fa fa-plus me-1 text-success"/> ADD PREDECESSOR</button>
+                                         </div>
+                                     </div>
+                                 </t>
 
-                                <t t-if="state.editorTab === 'successors'">
-                                    <table class="o_ug_table">
-                                        <thead><tr><th>Name</th><th>Type</th><th>Lag</th></tr></thead>
-                                        <tbody>
-                                            <t t-foreach="this.getTaskSuccessors(state.editorTask.id)" t-as="s" t-key="s.id">
-                                                <tr>
-                                                    <td><t t-esc="s.name"/></td>
-                                                    <td><span class="badge bg-light text-muted">FS</span></td>
-                                                    <td>0d</td>
-                                                </tr>
-                                            </t>
-                                        </tbody>
-                                    </table>
-                                </t>
-
-                                <t t-if="state.editorTab === 'resources'">
+                                 <t t-if="state.editorTab === 'successors'">
+                                     <div class="d-flex flex-column h-100" style="overflow: visible !important;">
+                                         <div class="flex-grow-1 bg-light mb-3" style="max-height: 250px; overflow: visible !important;">
+                                              <table class="table table-sm table-borderless table-hover mb-0" style="table-layout: fixed; width: 100%; font-size: 13px; overflow: visible !important;">
+                                                 <thead class="bg-white border-bottom" style="position: sticky; top: 0; z-index: 1;">
+                                                     <tr>
+                                                         <th class="fw-bold text-dark" style="padding: 10px; width: 320px;">Name</th>
+                                                         <th class="fw-bold text-dark border-start" style="padding: 10px; width: 220px;">Type</th>
+                                                         <th class="fw-bold text-dark text-end border-start" style="padding: 10px; width: 90px;">Lag</th>
+                                                         <th class="fw-bold text-dark text-center border-start" style="padding: 10px; width: 80px;">Active</th>
+                                                     </tr>
+                                                 </thead>
+                                                 <tbody>
+                                                     <t t-foreach="state.editorTask._succs || []" t-as="sId" t-key="sId">
+                                                          <t t-set="s" t-value="this.props.model.allTasksList.find(x=>x.id===sId)"/>
+                                                          <tr style="cursor: pointer; background: white;" class="border-bottom" t-attf-class="{{state.selectedSucc === sId ? 'table-primary' : ''}}" t-on-click.stop="() => state.selectedSucc = sId">
+                                                              <td class="p-0 border-end" style="vertical-align: middle; overflow: visible !important;">
+                                                                  <div class="position-relative w-100 h-100" style="overflow: visible !important;">
+                                                                      <div class="d-flex align-items-center justify-content-between px-2 w-100 h-100 cursor-pointer" 
+                                                                           style="min-height: 36px;"
+                                                                           t-on-click.stop="() => this.toggleSuccDropdown(sId)">
+                                                                           <span class="text-truncate text-dark" style="font-size: 13px;">
+                                                                               <t t-esc="s ? s.name : 'Select Task'"/>
+                                                                               <t t-if="s">
+                                                                                   <t t-if="s.computed_wbs"> (<t t-esc="s.computed_wbs"/>)</t>
+                                                                               </t>
+                                                                           </span>
+                                                                           <i class="fa fa-caret-down text-muted ms-1" style="font-size: 11px;"/>
+                                                                      </div>
+                                                                      <div t-if="state.openSuccDropdownId === sId" 
+                                                                           class="position-absolute bg-white border rounded shadow-lg py-1 mt-1 w-100 o_ug_custom_dropdown_menu"
+                                                                           style="top: 100%; left: 0; z-index: 1050; max-height: 200px; overflow-y: auto;">
+                                                                          <t t-foreach="this.props.model.allTasksList" t-as="ot" t-key="ot.id">
+                                                                              <div class="px-3 py-2 cursor-pointer o_ug_custom_dropdown_item"
+                                                                                   t-att-class="ot.id === sId ? 'active' : ''"
+                                                                                   t-on-click.stop="() => this.selectSuccessor(sId, ot.id)">
+                                                                                   <t t-esc="ot.name"/>
+                                                                                   <t t-if="ot.computed_wbs"> (<t t-esc="ot.computed_wbs"/>)</t>
+                                                                              </div>
+                                                                          </t>
+                                                                      </div>
+                                                                  </div>
+                                                              </td>
+                                                              <td class="border-end text-center" style="vertical-align: middle; padding: 4px 8px !important; overflow: visible !important;">
+                                                                  <div class="position-relative w-100 h-100" style="overflow: visible !important;">
+                                                                      <div class="d-flex align-items-center justify-content-between px-2 w-100 h-100 cursor-pointer o_ug_type_select shadow-none" 
+                                                                           style="min-height: 36px;"
+                                                                           t-on-click.stop="() => this.toggleSuccTypeDropdown(sId)">
+                                                                           <span class="text-truncate text-dark" style="font-size: 13px;">
+                                                                               <t t-if="this.getSuccType(sId) === 'FS'">Finish-to-Start (FS)</t>
+                                                                               <t t-elif="this.getSuccType(sId) === 'SS'">Start-to-Start (SS)</t>
+                                                                               <t t-elif="this.getSuccType(sId) === 'FF'">Finish-to-Finish (FF)</t>
+                                                                               <t t-elif="this.getSuccType(sId) === 'SF'">Start-to-Finish (SF)</t>
+                                                                               <t t-else="">Finish-to-Start (FS)</t>
+                                                                           </span>
+                                                                           <i class="fa fa-caret-down text-muted ms-1" style="font-size: 11px;"/>
+                                                                      </div>
+                                                                      <div t-if="state.openSuccTypeDropdownId === sId" 
+                                                                           class="position-absolute bg-white border rounded shadow-lg py-1 mt-1 w-100 o_ug_custom_dropdown_menu"
+                                                                           style="top: 100%; left: 0; z-index: 1050; max-height: 200px; overflow-y: auto;">
+                                                                           <div class="px-3 py-2 cursor-pointer o_ug_custom_dropdown_item" t-att-class="this.getSuccType(sId) === 'FS' ? 'active' : ''" t-on-click.stop="() => this.selectSuccType(sId, 'FS')">Finish-to-Start (FS)</div>
+                                                                           <div class="px-3 py-2 cursor-pointer o_ug_custom_dropdown_item" t-att-class="this.getSuccType(sId) === 'SS' ? 'active' : ''" t-on-click.stop="() => this.selectSuccType(sId, 'SS')">Start-to-Start (SS)</div>
+                                                                           <div class="px-3 py-2 cursor-pointer o_ug_custom_dropdown_item" t-att-class="this.getSuccType(sId) === 'FF' ? 'active' : ''" t-on-click.stop="() => this.selectSuccType(sId, 'FF')">Finish-to-Finish (FF)</div>
+                                                                           <div class="px-3 py-2 cursor-pointer o_ug_custom_dropdown_item" t-att-class="this.getSuccType(sId) === 'SF' ? 'active' : ''" t-on-click.stop="() => this.selectSuccType(sId, 'SF')">Start-to-Finish (SF)</div>
+                                                                      </div>
+                                                                  </div>
+                                                              </td>
+                                                              <td class="p-0 border-end text-end" style="vertical-align: middle;">
+                                                                  <input type="text" class="form-control form-control-sm border-0 shadow-none text-dark bg-transparent w-100 h-100 text-end pe-2" value="0 days" style="border-radius: 0; min-height: 36px;"/>
+                                                              </td>
+                                                              <td class="p-0 text-center" style="vertical-align: middle;">
+                                                                  <input type="checkbox" class="form-check-input mt-0" style="cursor: pointer;"
+                                                                         t-att-checked="!state.editorTask._inactive_succs.includes(sId)"
+                                                                         t-on-change="(ev) => this.toggleActiveSucc(sId, ev.target.checked)"/>
+                                                              </td>
+                                                          </tr>
+                                                     </t>
+                                                     <tr t-if="!state.editorTask._succs || state.editorTask._succs.length === 0">
+                                                         <td colspan="4" class="text-center text-muted py-4 bg-white border-bottom">No successors defined</td>
+                                                     </tr>
+                                                 </tbody>
+                                             </table>
+                                         </div>
+                                         <div class="d-flex align-items-center gap-3 mt-1 ps-2">
+                                              <i class="fa fa-plus fs-5 fw-bold text-dark cursor-pointer" t-on-click="this.addSucc"/>
+                                              <i class="fa fa-trash fs-5 cursor-pointer" t-attf-style="color: {{state.selectedSucc ? '#5d4037' : '#ccc'}};" t-on-click="() => state.selectedSucc &amp;&amp; this.delSucc(state.selectedSucc)"/>
+                                         </div>
+                                     </div>
+                                 </t>
+                                 <t t-if="state.editorTab === 'resources'">
                                     <div class="d-flex flex-column h-100">
-                                        <div class="flex-grow-1 overflow-auto" style="max-height: 300px;">
-                                            <table class="o_ug_table">
+                                        <div class="flex-grow-1" style="max-height: 300px; overflow: visible !important;">
+                                             <table class="o_ug_table" style="overflow: visible !important;">
                                                 <thead><tr><th>Resource</th><th>Units (%)</th><th style="width:50px;"></th></tr></thead>
                                                 <tbody>
                                                     <t t-foreach="state.editorTask._resources" t-as="rId" t-key="rId">
@@ -1891,16 +2069,122 @@ export class UltimateGanttRenderer extends Component {
             this.state.editingCell.val = this.state.editingCell.val.filter(x => x !== id);
         }
     }
-    openTaskEditor(t) {
+    async openTaskEditor(t) {
         this.state.editorTab = 'general';
+        const successors = this.getTaskSuccessors(t.id) || [];
+        this.state.openPredDropdownId = null;
+        this.state.openSuccDropdownId = null;
+        this.state.openPredTypeDropdownId = null;
+        this.state.openSuccTypeDropdownId = null;
+        this.state.selectedSucc = null;
+
+        // Fetch predecessor dependency records to extract types and lags
+        const deps = await this.orm.searchRead("project.task.dependency", [["task_id", "=", t.id]], ["depends_on_id", "dependency_type", "lag"]);
+        const depTypes = {};
+        deps.forEach(d => {
+            const predId = Array.isArray(d.depends_on_id) ? d.depends_on_id[0] : d.depends_on_id;
+            depTypes[predId] = (d.dependency_type || 'fs').toUpperCase();
+        });
+
+        // Fetch successor dependency records to extract types and lags
+        const succDeps = await this.orm.searchRead("project.task.dependency", [["depends_on_id", "=", t.id]], ["task_id", "dependency_type", "lag"]);
+        const succDepTypes = {};
+        succDeps.forEach(d => {
+            const succId = Array.isArray(d.task_id) ? d.task_id[0] : d.task_id;
+            succDepTypes[succId] = (d.dependency_type || 'fs').toUpperCase();
+        });
+
         this.state.editorTask = {
             ...t,
             planned_date_begin: t.planned_date_begin.replace(' ', 'T').substring(0, 16),
             date_deadline: t.date_deadline.replace(' ', 'T').substring(0, 16),
             constraint_date: t.constraint_date ? t.constraint_date.replace(' ', 'T').substring(0, 16) : null,
             _preds: [...(t.depend_on_ids || [])],
-            _resources: [...(t.user_ids || [])]
+            _inactive_preds: [...(t.inactive_dependency_ids || [])],
+            _resources: [...(t.user_ids || [])],
+            _succs: successors.map(s => s.id),
+            _inactive_succs: successors.filter(s => (s.inactive_dependency_ids || []).includes(t.id)).map(s => s.id),
+            _depTypes: depTypes,
+            _succDepTypes: succDepTypes
         };
+    }
+    getPredType(pId) {
+        return (this.state.editorTask && this.state.editorTask._depTypes && this.state.editorTask._depTypes[pId]) || 'FS';
+    }
+    getSuccType(sId) {
+        return (this.state.editorTask && this.state.editorTask._succDepTypes && this.state.editorTask._succDepTypes[sId]) || 'FS';
+    }
+    togglePredTypeDropdown(pId) {
+        this.state.openPredTypeDropdownId = this.state.openPredTypeDropdownId === pId ? null : pId;
+        this.state.openSuccTypeDropdownId = null;
+        this.state.openPredDropdownId = null;
+        this.state.openSuccDropdownId = null;
+    }
+    selectPredType(pId, type) {
+        if (!this.state.editorTask._depTypes) this.state.editorTask._depTypes = {};
+        this.state.editorTask._depTypes[pId] = type;
+        this.state.openPredTypeDropdownId = null;
+    }
+    toggleSuccTypeDropdown(sId) {
+        this.state.openSuccTypeDropdownId = this.state.openSuccTypeDropdownId === sId ? null : sId;
+        this.state.openPredTypeDropdownId = null;
+        this.state.openPredDropdownId = null;
+        this.state.openSuccDropdownId = null;
+    }
+    selectSuccType(sId, type) {
+        if (!this.state.editorTask._succDepTypes) this.state.editorTask._succDepTypes = {};
+        this.state.editorTask._succDepTypes[sId] = type;
+        this.state.openSuccTypeDropdownId = null;
+    }
+    toggleActivePred(pId, checked) {
+        if (!checked) {
+            if (!this.state.editorTask._inactive_preds.includes(pId)) {
+                this.state.editorTask._inactive_preds.push(pId);
+            }
+        } else {
+            this.state.editorTask._inactive_preds = this.state.editorTask._inactive_preds.filter(id => id !== pId);
+        }
+    }
+    toggleActiveSucc(succId, checked) {
+        if (!checked) {
+            if (!this.state.editorTask._inactive_succs.includes(succId)) {
+                this.state.editorTask._inactive_succs.push(succId);
+            }
+        } else {
+            this.state.editorTask._inactive_succs = this.state.editorTask._inactive_succs.filter(id => id !== succId);
+        }
+    }
+    togglePredDropdown(pId) {
+        this.state.openPredDropdownId = this.state.openPredDropdownId === pId ? null : pId;
+        this.state.openSuccDropdownId = null;
+    }
+    toggleSuccDropdown(sId) {
+        this.state.openSuccDropdownId = this.state.openSuccDropdownId === sId ? null : sId;
+        this.state.openPredDropdownId = null;
+    }
+    selectPredecessor(oldId, newId) {
+        const idx = this.state.editorTask._preds.indexOf(oldId);
+        if (idx !== -1) {
+            this.state.editorTask._preds[idx] = parseInt(newId);
+        }
+        this.state.openPredDropdownId = null;
+    }
+    selectSuccessor(oldId, newId) {
+        const idx = this.state.editorTask._succs.indexOf(oldId);
+        if (idx !== -1) {
+            this.state.editorTask._succs[idx] = parseInt(newId);
+        }
+        this.state.openSuccDropdownId = null;
+    }
+    addSucc() {
+        const first = this.props.model.allTasksList.find(t => t.id !== this.state.editorTask.id && !(this.state.editorTask._succs || []).includes(t.id));
+        if (first) {
+            if (!this.state.editorTask._succs) this.state.editorTask._succs = [];
+            this.state.editorTask._succs.push(first.id);
+        }
+    }
+    delSucc(id) {
+        this.state.editorTask._succs = (this.state.editorTask._succs || []).filter(s => s !== id);
     }
     closeEditor() { this.state.editorTask = null; }
     async saveEditor() {
@@ -1929,11 +2213,142 @@ export class UltimateGanttRenderer extends Component {
             effort_driven: et.effort_driven,
             project_border: et.project_border,
             depend_on_ids: [[6, 0, et._preds]],
+            inactive_dependency_ids: [[6, 0, et._inactive_preds]],
             user_ids: [[6, 0, et._resources]]
         };
         this.pushHistory('update', { id: et.id, ...original }, { id: et.id, ...vals });
         await this.orm.write("project.task", [et.id], vals);
+
+        // Handle successor updates:
+        const originalSuccIds = this.getTaskSuccessors(et.id).map(s => s.id);
+        const currentSuccIds = et._succs || [];
+
+        // 1. Remove depend_on_ids from removed successors
+        const removedSuccs = originalSuccIds.filter(id => !currentSuccIds.includes(id));
+        for (let sId of removedSuccs) {
+            const taskObj = this.props.model.data.flatMap(p => p.tasks || []).find(t => t && t.id === sId);
+            if (taskObj) {
+                let preds = (taskObj.depend_on_ids || []).filter(id => id !== et.id);
+                let inactivePreds = (taskObj.inactive_dependency_ids || []).filter(id => id !== et.id);
+                await this.orm.write("project.task", [sId], {
+                    depend_on_ids: [[6, 0, preds]],
+                    inactive_dependency_ids: [[6, 0, inactivePreds]]
+                });
+            }
+        }
+
+        // 2. Add depend_on_ids to new successors
+        const newSuccs = currentSuccIds.filter(id => !originalSuccIds.includes(id));
+        for (let sId of newSuccs) {
+            const taskObj = this.props.model.data.flatMap(p => p.tasks || []).find(t => t && t.id === sId);
+            if (taskObj) {
+                let preds = [...(taskObj.depend_on_ids || [])];
+                if (!preds.includes(et.id)) preds.push(et.id);
+                
+                let inactivePreds = [...(taskObj.inactive_dependency_ids || [])];
+                const isInactive = (et._inactive_succs || []).includes(sId);
+                if (isInactive && !inactivePreds.includes(et.id)) {
+                    inactivePreds.push(et.id);
+                } else if (!isInactive) {
+                    inactivePreds = inactivePreds.filter(id => id !== et.id);
+                }
+
+                await this.orm.write("project.task", [sId], {
+                    depend_on_ids: [[6, 0, preds]],
+                    inactive_dependency_ids: [[6, 0, inactivePreds]]
+                });
+            }
+        }
+
+        // 3. Update active/inactive states for remaining (kept) successors
+        const keptSuccs = currentSuccIds.filter(id => originalSuccIds.includes(id));
+        for (let sId of keptSuccs) {
+            const taskObj = this.props.model.data.flatMap(p => p.tasks || []).find(t => t && t.id === sId);
+            if (taskObj) {
+                let inactivePreds = [...(taskObj.inactive_dependency_ids || [])];
+                const isInactive = (et._inactive_succs || []).includes(sId);
+                const wasInactive = (taskObj.inactive_dependency_ids || []).includes(et.id);
+                if (isInactive !== wasInactive) {
+                    if (isInactive) {
+                        if (!inactivePreds.includes(et.id)) inactivePreds.push(et.id);
+                    } else {
+                        inactivePreds = inactivePreds.filter(id => id !== et.id);
+                    }
+                    await this.orm.write("project.task", [sId], {
+                        inactive_dependency_ids: [[6, 0, inactivePreds]]
+                    });
+                }
+            }
+        }
+
+        // Persist predecessor dependency types:
+        try {
+            const existingDeps = await this.orm.searchRead("project.task.dependency", [["task_id", "=", et.id]], ["depends_on_id", "dependency_type"]);
+            const existingPredMap = {};
+            existingDeps.forEach(d => {
+                const pId = Array.isArray(d.depends_on_id) ? d.depends_on_id[0] : d.depends_on_id;
+                existingPredMap[pId] = d.id;
+            });
+
+            // For each predecessor, update or create dependency record
+            for (let pId of (et._preds || [])) {
+                const curType = (et._depTypes && et._depTypes[pId] || 'FS').toLowerCase();
+                if (pId in existingPredMap) {
+                    await this.orm.write("project.task.dependency", [existingPredMap[pId]], { dependency_type: curType });
+                } else {
+                    await this.orm.create("project.task.dependency", [{
+                        task_id: et.id,
+                        depends_on_id: pId,
+                        dependency_type: curType
+                    }]);
+                }
+            }
+
+            // Remove dependency records for deleted predecessors
+            const removedPredIds = Object.keys(existingPredMap).map(Number).filter(id => !(et._preds || []).includes(id));
+            if (removedPredIds.length > 0) {
+                const toDelete = removedPredIds.map(id => existingPredMap[id]);
+                await this.orm.unlink("project.task.dependency", toDelete);
+            }
+        } catch (err) {
+            console.error("Error saving predecessor dependency types:", err);
+        }
+
+        // Persist successor dependency types:
+        try {
+            const existingSuccDeps = await this.orm.searchRead("project.task.dependency", [["depends_on_id", "=", et.id]], ["task_id", "dependency_type"]);
+            const existingSuccMap = {};
+            existingSuccDeps.forEach(d => {
+                const sId = Array.isArray(d.task_id) ? d.task_id[0] : d.task_id;
+                existingSuccMap[sId] = d.id;
+            });
+
+            // For each successor, update or create dependency record
+            for (let sId of (et._succs || [])) {
+                const curType = (et._succDepTypes && et._succDepTypes[sId] || 'FS').toLowerCase();
+                if (sId in existingSuccMap) {
+                    await this.orm.write("project.task.dependency", [existingSuccMap[sId]], { dependency_type: curType });
+                } else {
+                    await this.orm.create("project.task.dependency", [{
+                        task_id: sId,
+                        depends_on_id: et.id,
+                        dependency_type: curType
+                    }]);
+                }
+            }
+
+            // Remove dependency records for deleted successors
+            const removedSuccIds = Object.keys(existingSuccMap).map(Number).filter(id => !(et._succs || []).includes(id));
+            if (removedSuccIds.length > 0) {
+                const toDelete = removedSuccIds.map(id => existingSuccMap[id]);
+                await this.orm.unlink("project.task.dependency", toDelete);
+            }
+        } catch (err) {
+            console.error("Error saving successor dependency types:", err);
+        }
+
         await this.props.model.load(this.props.model.params);
+        await this.onAutoSchedule();
         this.closeEditor();
     }
     addPred() {
@@ -2369,7 +2784,7 @@ export class UltimateGanttRenderer extends Component {
         let depType = this.state.config.gantt_dependency_type || 'FS';
         let tasks = (this.props.model.data || []).flatMap(p => p.tasks);
 
-        let preds = tasks.filter(x => (t.depend_on_ids || []).includes(x.id));
+        let preds = tasks.filter(x => (t.depend_on_ids || []).includes(x.id) && !(t.inactive_dependency_ids || []).includes(x.id));
 
         if (preds.length > 0) {
             let maxDiff = null;
@@ -2379,11 +2794,12 @@ export class UltimateGanttRenderer extends Component {
                 let tStart = deserializeDateTime(t.planned_date_begin);
                 let tEnd = deserializeDateTime(t.date_deadline);
 
+                let specificType = (this.props.model.dependencyMap && this.props.model.dependencyMap[`${t.id}_${p.id}`]) || depType;
                 let diff = 0;
-                if (depType === 'FS') diff = pEnd.diff(tStart, 'days').days;
-                else if (depType === 'SS') diff = pStart.diff(tStart, 'days').days;
-                else if (depType === 'FF') diff = pEnd.diff(tEnd, 'days').days;
-                else if (depType === 'SF') diff = pStart.diff(tEnd, 'days').days;
+                if (specificType === 'FS') diff = pEnd.diff(tStart, 'days').days;
+                else if (specificType === 'SS') diff = pStart.diff(tStart, 'days').days;
+                else if (specificType === 'FF') diff = pEnd.diff(tEnd, 'days').days;
+                else if (specificType === 'SF') diff = pStart.diff(tEnd, 'days').days;
 
                 if (maxDiff === null || diff > maxDiff) maxDiff = diff;
             });
@@ -2412,7 +2828,7 @@ export class UltimateGanttRenderer extends Component {
         let tasks = (this.props.model.data || []).flatMap(p => p.tasks);
         while (stack.length) {
             let curId = stack.pop();
-            tasks.filter(t => (t.depend_on_ids || []).some(id => String(id) === curId)).forEach(s => {
+            tasks.filter(t => (t.depend_on_ids || []).some(id => String(id) === curId && !(t.inactive_dependency_ids || []).includes(Number(id)))).forEach(s => {
                 if (!chain.has(String(s.id))) { chain.add(String(s.id)); stack.push(String(s.id)); }
             });
         }
@@ -2435,10 +2851,11 @@ export class UltimateGanttRenderer extends Component {
             changed = false; iterations++;
             allTasks.forEach(t => {
                 const cur = taskMap[t.id];
-                if (!t.depend_on_ids || !t.depend_on_ids.length) return;
+                const activePreds = (t.depend_on_ids || []).filter(pId => !(t.inactive_dependency_ids || []).includes(pId));
+                if (!activePreds.length) return;
 
                 let maxEnd = null;
-                t.depend_on_ids.forEach(pId => {
+                activePreds.forEach(pId => {
                     const pred = taskMap[pId];
                     if (pred) {
                         if (!maxEnd || pred.e > maxEnd) maxEnd = pred.e;
@@ -2588,11 +3005,12 @@ export class UltimateGanttRenderer extends Component {
         this.visibleProjects.forEach(p => p.visibleTasks.forEach(t => (t.depend_on_ids || []).forEach(pI => {
             if (!visIds.has(pI)) return; let pr = aT[pI];
             if (pr) {
+                let specificType = (this.props.model.dependencyMap && this.props.model.dependencyMap[`${t.id}_${pI}`]) || depType;
                 let x1, x2;
-                if (depType === 'FS') { x1 = this._taskEdgeX(pr, 'end'); x2 = this._taskEdgeX(t, 'start'); }
-                else if (depType === 'SS') { x1 = this._taskEdgeX(pr, 'start'); x2 = this._taskEdgeX(t, 'start'); }
-                else if (depType === 'FF') { x1 = this._taskEdgeX(pr, 'end'); x2 = this._taskEdgeX(t, 'end'); }
-                else if (depType === 'SF') { x1 = this._taskEdgeX(pr, 'start'); x2 = this._taskEdgeX(t, 'end'); }
+                if (specificType === 'FS') { x1 = this._taskEdgeX(pr, 'end'); x2 = this._taskEdgeX(t, 'start'); }
+                else if (specificType === 'SS') { x1 = this._taskEdgeX(pr, 'start'); x2 = this._taskEdgeX(t, 'start'); }
+                else if (specificType === 'FF') { x1 = this._taskEdgeX(pr, 'end'); x2 = this._taskEdgeX(t, 'end'); }
+                else if (specificType === 'SF') { x1 = this._taskEdgeX(pr, 'start'); x2 = this._taskEdgeX(t, 'end'); }
 
                 let y1 = this._taskRowY(pr), y2 = this._taskRowY(t);
                 if (isNaN(y1) || isNaN(y2)) return;
@@ -2600,7 +3018,7 @@ export class UltimateGanttRenderer extends Component {
                 let path = '';
                 const gap = 12; // Gap to clear task boxes
 
-                if (depType === 'FS') {
+                if (specificType === 'FS') {
                     if (x2 >= x1 + gap) {
                         let midX = x1 + (x2 - x1) / 2;
                         path = `M${x1},${y1} L${midX},${y1} L${midX},${y2} L${x2},${y2}`;
@@ -2608,13 +3026,13 @@ export class UltimateGanttRenderer extends Component {
                         let midY = y1 + (y2 - y1) / 2;
                         path = `M${x1},${y1} L${x1 + gap},${y1} L${x1 + gap},${midY} L${x2 - gap},${midY} L${x2 - gap},${y2} L${x2},${y2}`;
                     }
-                } else if (depType === 'SS') {
+                } else if (specificType === 'SS') {
                     let mX = Math.min(x1, x2) - gap;
                     path = `M${x1},${y1} L${mX},${y1} L${mX},${y2} L${x2},${y2}`;
-                } else if (depType === 'FF') {
+                } else if (specificType === 'FF') {
                     let mX = Math.max(x1, x2) + gap;
                     path = `M${x1},${y1} L${mX},${y1} L${mX},${y2} L${x2},${y2}`;
-                } else if (depType === 'SF') {
+                } else if (specificType === 'SF') {
                     if (x1 >= x2 + gap) {
                         let midX = x2 + (x1 - x2) / 2;
                         path = `M${x1},${y1} L${midX},${y1} L${midX},${y2} L${x2},${y2}`;
@@ -2624,7 +3042,7 @@ export class UltimateGanttRenderer extends Component {
                     }
                 }
 
-                l.push({ id: `d_${pI}_${t.id}`, path: path, isCritical: t.isCritical && pr.isCritical && this.state.config.gantt_show_critical_path });
+                l.push({ id: `d_${pI}_${t.id}`, path: path, isCritical: t.isCritical && pr.isCritical && this.state.config.gantt_show_critical_path, isInactive: (t.inactive_dependency_ids || []).includes(pI) });
             }
         }))); return l;
     }
@@ -2668,6 +3086,53 @@ export class UltimateGanttRenderer extends Component {
         this.props.model.data.forEach(p => p.tasks.forEach(t => snapshot[t.id] = { s: t.planned_date_begin, e: t.date_deadline }));
         this.pushHistory('snapshot', null, snapshot);
     }
+    cleanWriteVals(rawVals) {
+        if (!rawVals) return {};
+        const allowedFields = [
+            'name', 'planned_date_begin', 'date_deadline', 'is_milestone',
+            'actual_progress', 'cost', 'complexity', 'gantt_color', 'effort',
+            'scheduling_mode', 'constraint_type', 'constraint_date',
+            'manually_scheduled', 'rollup', 'inactive', 'calendar_id',
+            'ignore_resource_calendar', 'effort_driven', 'project_border',
+            'depend_on_ids', 'inactive_dependency_ids', 'user_ids',
+            'sequence', 'parent_id', 'stage_id'
+        ];
+        const vals = {};
+        for (const field of allowedFields) {
+            if (!(field in rawVals)) continue;
+            let val = rawVals[field];
+            if (val === undefined) continue;
+
+            // Handle many2one represented as [id, name]
+            if (Array.isArray(val) && val.length === 2 && typeof val[0] === 'number' && typeof val[1] === 'string') {
+                vals[field] = val[0];
+                continue;
+            }
+
+            // Handle relation fields (many2many / one2many) if they are raw arrays of numbers
+            if (['depend_on_ids', 'inactive_dependency_ids', 'user_ids'].includes(field)) {
+                if (Array.isArray(val) && val.length > 0 && Array.isArray(val[0]) && val[0][0] === 6) {
+                    vals[field] = val;
+                } else if (Array.isArray(val)) {
+                    const ids = val.map(x => (Array.isArray(x) ? x[0] : x)).filter(x => typeof x === 'number');
+                    vals[field] = [[6, 0, ids]];
+                }
+                continue;
+            }
+
+            // Standard conversion for dates
+            if (['planned_date_begin', 'date_deadline', 'constraint_date'].includes(field) && typeof val === 'string') {
+                vals[field] = val.replace('T', ' ').trim();
+                if (vals[field] && vals[field].length === 16) {
+                    vals[field] += ':00';
+                }
+                continue;
+            }
+
+            vals[field] = val;
+        }
+        return vals;
+    }
     async undo() {
         if (!this.state.history.length) return;
         const entry = this.state.history.pop();
@@ -2683,7 +3148,7 @@ export class UltimateGanttRenderer extends Component {
             await this.props.model.load(this.props.model.params);
         } else {
             this.state.redoStack.push(entry);
-            await this.orm.write("project.task", [entry.oldVal.id], entry.oldVal);
+            await this.orm.write("project.task", [entry.oldVal.id], this.cleanWriteVals(entry.oldVal));
             await this.props.model.load(this.props.model.params);
         }
     }
@@ -2702,7 +3167,7 @@ export class UltimateGanttRenderer extends Component {
             await this.props.model.load(this.props.model.params);
         } else {
             this.state.history.push(entry);
-            await this.orm.write("project.task", [entry.newVal.id], entry.newVal);
+            await this.orm.write("project.task", [entry.newVal.id], this.cleanWriteVals(entry.newVal));
             await this.props.model.load(this.props.model.params);
         }
     }
