@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_project_task_ultimate_gantt,project.task.ultimate.gantt,project.model_project_task,,1,1,1,1
+access_project_task_dependency,project.task.dependency,model_project_task_dependency,,1,1,1,1
+access_project_gantt_version,project.gantt.version,model_project_gantt_version,,1,1,1,1

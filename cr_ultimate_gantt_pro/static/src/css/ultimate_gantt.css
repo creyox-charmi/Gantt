@@ -1,0 +1,215 @@
+.o_ultimate_gantt_view {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: #ffffff;
+}
+
+.o_ultimate_gantt_sidebar_header div {
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #666;
+}
+
+.o_ultimate_gantt_task_row {
+    font-size: 13px;
+    transition: background 0.2s;
+}
+
+.o_ultimate_gantt_task_row:hover {
+    background: #f8f9fa;
+}
+
+.o_ultimate_gantt_grid {
+    background-image: 
+        linear-gradient(to right, #f1f1f1 1px, transparent 1px),
+        linear-gradient(to bottom, #f1f1f1 1px, transparent 1px);
+    background-size: 40px 41px;
+}
+
+.o_ultimate_gantt_task_bar {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    height: 24px !important;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.o_ultimate_gantt_progress_actual {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.o_ultimate_gantt_graph_overlay {
+    opacity: 0.8;
+}
+
+.o_ultimate_gantt_toolbar_secondary {
+    min-height: 40px;
+}
+
+.o_ultimate_gantt_toolbar_secondary .btn {
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.o_ultimate_gantt_toolbar_secondary .btn i {
+    font-size: 14px;
+    color: #555;
+}
+
+/* Scrollbar styling */
+.o_ultimate_gantt_container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.o_ultimate_gantt_container::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+}
+
+/* S-Curve Animation */
+.o_ultimate_gantt_graph_overlay polyline {
+    stroke-dasharray: 2000;
+    stroke-dashoffset: 2000;
+    animation: dash 2s ease-out forwards;
+}
+
+@keyframes dash {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+/* Sidebar Column Resizer */
+.o_ug_sidebar_col {
+    position: relative;
+    border-right: 1px solid #e2e8f0;
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    background: inherit;
+}
+
+.o_ug_sidebar_col span, .o_ug_sidebar_col t {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.o_ug_col_resizer {
+    position: absolute;
+    top: 0;
+    right: -3px;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 100;
+    transition: background 0.2s;
+}
+
+.o_ug_col_resizer:hover {
+    background: rgba(0, 161, 155, 0.4);
+}
+
+.o_ug_col_resizer::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: #e2e8f0;
+    display: block;
+}
+
+.o_ug_sidebar_header_row .o_ug_sidebar_col:hover .o_ug_col_resizer::after {
+    background: #00a19b;
+}
+
+.o_ug_row {
+    display: flex;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.o_ug_row_cut {
+    opacity: 0.5 !important;
+    border-style: dashed !important;
+    background: #f8fafc !important;
+}
+
+.o_ug_milestone_diamond {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    top: 50%;
+    left: 0;
+    transform: translate(-50%, -50%) rotate(45deg);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    z-index: 5;
+}
+
+.o_ug_sidebar_header_row {
+    display: flex;
+    background: #f8fafc;
+    border-bottom: 1px solid #cbd5e1;
+    font-weight: 700;
+}
+
+/* Context Menu Styles */
+.o_ug_context_menu {
+    position: fixed;
+    z-index: 5000;
+    background: #fff;
+    min-width: 180px;
+    padding: 6px 0;
+    border-radius: 6px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    user-select: none;
+    font-family: inherit;
+}
+
+.o_ug_ctx_item {
+    padding: 8px 16px;
+    font-size: 13px;
+    color: #475569;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    position: relative;
+    transition: all 0.15s;
+}
+
+.o_ug_ctx_item:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+}
+
+.o_ug_ctx_sep {
+    height: 1px;
+    background: #f1f5f9;
+    margin: 4px 0;
+}
+
+.o_ug_ctx_item i {
+    width: 20px;
+}
+
+/* Submenu logic */
+.o_ug_ctx_sub {
+    display: none;
+    position: absolute;
+    left: 100%;
+    top: 0;
+    background: #fff;
+    min-width: 150px;
+    padding: 4px 0;
+    border-radius: 6px;
+    margin-left: 2px;
+    z-index: 5001;
+}
+
+.o_ug_ctx_item.has_sub:hover > .o_ug_ctx_sub {
+    display: block;
+}

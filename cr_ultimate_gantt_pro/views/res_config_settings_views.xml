@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_gantt_pro" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.cr_ultimate_gantt_pro</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="project.res_config_settings_view_form"/>
+        <field name="priority">60</field>
+        <field name="arch" type="xml">
+            <xpath expr="//app[@name='project']" position="inside">
+                <block title="Ultimate Gantt Pro - Sidebar Columns" id="gantt_sidebar_columns">
+                    <setting id="gantt_setting_wbs" help="Show the hierarchical WBS index in sidebar">
+                        <field name="gantt_show_wbs"/>
+                    </setting>
+                    <setting id="gantt_setting_start_date" help="Show start date column">
+                        <field name="gantt_show_start_date"/>
+                    </setting>
+                    <setting id="gantt_setting_duration" help="Show task duration column">
+                        <field name="gantt_show_duration"/>
+                    </setting>
+                    <setting id="gantt_setting_assignees" help="Show assignee names column">
+                        <field name="gantt_show_assignees"/>
+                    </setting>
+                    <setting id="gantt_setting_cost" help="Show cost column">
+                        <field name="gantt_show_cost"/>
+                    </setting>
+                    <setting id="gantt_setting_complexity" help="Show complexity column">
+                        <field name="gantt_show_complexity"/>
+                    </setting>
+                    <setting id="gantt_setting_constraint_date" help="Show constraint date column">
+                        <field name="gantt_show_constraint_date"/>
+                    </setting>
+                    <setting id="gantt_setting_status" help="Show status column">
+                        <field name="gantt_show_status"/>
+                    </setting>
+                    
+                    <!-- Missing Original Columns -->
+                    <setting id="gantt_setting_progress" help="Show % done column">
+                        <field name="gantt_show_progress"/>
+                    </setting>
+                    <setting id="gantt_setting_predecessors" help="Show predecessors column">
+                        <field name="gantt_show_predecessors"/>
+                    </setting>
+                    <setting id="gantt_setting_successors" help="Show successors column">
+                        <field name="gantt_show_successors"/>
+                    </setting>
+                    <setting id="gantt_setting_calendar" help="Show calendar column">
+                        <field name="gantt_show_calendar"/>
+                    </setting>
+                    <setting id="gantt_setting_constraint_type" help="Show constraint type column">
+                        <field name="gantt_show_constraint_type"/>
+                    </setting>
+                    <setting id="gantt_setting_deadline" help="Show deadline column">
+                        <field name="gantt_show_deadline"/>
+                    </setting>
+                    
+                    <!-- New Bryntum Columns -->
+                    <setting id="gantt_setting_actual_effort" help="Show actual effort column">
+                        <field name="gantt_show_actual_effort"/>
+                    </setting>
+                    <setting id="gantt_setting_baseline_duration" help="Show baseline duration column">
+                        <field name="gantt_show_baseline_duration"/>
+                    </setting>
+                    <setting id="gantt_setting_baseline_effort" help="Show baseline effort column">
+                        <field name="gantt_show_baseline_effort"/>
+                    </setting>
+                    <setting id="gantt_setting_baseline_finish" help="Show baseline finish column">
+                        <field name="gantt_show_baseline_finish"/>
+                    </setting>
+                    <setting id="gantt_setting_baseline_start" help="Show baseline start column">
+                        <field name="gantt_show_baseline_start"/>
+                    </setting>
+                    <setting id="gantt_setting_duration_variance" help="Show duration variance column">
+                        <field name="gantt_show_duration_variance"/>
+                    </setting>
+                    <setting id="gantt_setting_early_end" help="Show early end column">
+                        <field name="gantt_show_early_end"/>
+                    </setting>
+                    <setting id="gantt_setting_early_start" help="Show early start column">
+                        <field name="gantt_show_early_start"/>
+                    </setting>
+                    <setting id="gantt_setting_effort" help="Show effort column">
+                        <field name="gantt_show_effort"/>
+                    </setting>
+                    <setting id="gantt_setting_finish" help="Show finish column">
+                        <field name="gantt_show_finish"/>
+                    </setting>
+                    <setting id="gantt_setting_finish_variance" help="Show finish variance column">
+                        <field name="gantt_show_finish_variance"/>
+                    </setting>
+                    <setting id="gantt_setting_ignore_resource_calendar" help="Show ignore resource calendar column">
+                        <field name="gantt_show_ignore_resource_calendar"/>
+                    </setting>
+                    <setting id="gantt_setting_inactive" help="Show inactive column">
+                        <field name="gantt_show_inactive"/>
+                    </setting>
+                    <setting id="gantt_setting_info" help="Show info column">
+                        <field name="gantt_show_info"/>
+                    </setting>
+                    <setting id="gantt_setting_late_end" help="Show late end column">
+                        <field name="gantt_show_late_end"/>
+                    </setting>
+                    <setting id="gantt_setting_late_start" help="Show late start column">
+                        <field name="gantt_show_late_start"/>
+                    </setting>
+                    <setting id="gantt_setting_manually_scheduled" help="Show manually scheduled column">
+                        <field name="gantt_show_manually_scheduled"/>
+                    </setting>
+                    <setting id="gantt_setting_milestone" help="Show milestone column">
+                        <field name="gantt_show_milestone"/>
+                    </setting>
+                    <setting id="gantt_setting_note" help="Show note column">
+                        <field name="gantt_show_note"/>
+                    </setting>
+                    <setting id="gantt_setting_planned_percent_done" help="Show planned % done column">
+                        <field name="gantt_show_planned_percent_done"/>
+                    </setting>
+                    <setting id="gantt_setting_rollup" help="Show rollup column">
+                        <field name="gantt_show_rollup"/>
+                    </setting>
+                    <setting id="gantt_setting_scheduling_direction" help="Show scheduling direction column">
+                        <field name="gantt_show_scheduling_direction"/>
+                    </setting>
+                    <setting id="gantt_setting_show_in_timeline" help="Show in timeline column">
+                        <field name="gantt_show_show_in_timeline"/>
+                    </setting>
+                    <setting id="gantt_setting_start_variance" help="Show start variance column">
+                        <field name="gantt_show_start_variance"/>
+                    </setting>
+                    <setting id="gantt_setting_total_slack" help="Show total slack column">
+                        <field name="gantt_show_total_slack"/>
+                    </setting>
+                </block>
+
+                <block title="Ultimate Gantt Pro - Bar Tooltip" id="gantt_tooltip_columns">
+                    <setting id="gantt_tip_name" help="Show task name in tooltip">
+                        <field name="gantt_tooltip_show_name"/>
+                    </setting>
+                    <setting id="gantt_tip_duration" help="Show duration in tooltip">
+                        <field name="gantt_tooltip_show_duration"/>
+                    </setting>
+                    <setting id="gantt_tip_start" help="Show start date in tooltip">
+                        <field name="gantt_tooltip_show_start"/>
+                    </setting>
+                    <setting id="gantt_tip_end" help="Show end date in tooltip">
+                        <field name="gantt_tooltip_show_end"/>
+                    </setting>
+                    <setting id="gantt_tip_progress" help="Show progress % in tooltip">
+                        <field name="gantt_tooltip_show_progress"/>
+                    </setting>
+                    <setting id="gantt_tip_deadline" help="Show deadline date in tooltip">
+                        <field name="gantt_tooltip_show_deadline"/>
+                    </setting>
+                    <setting id="gantt_tip_stage" help="Show task stage in tooltip">
+                        <field name="gantt_tooltip_show_stage"/>
+                    </setting>
+                    <setting id="gantt_tip_constraint_type" help="Show constraint type in tooltip">
+                        <field name="gantt_tooltip_show_constraint_type"/>
+                    </setting>
+                    <setting id="gantt_tip_constraint_date" help="Show constraint date in tooltip">
+                        <field name="gantt_tooltip_show_constraint_date"/>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="view_task_form_ultimate_gantt" model="ir.ui.view">
+            <field name="name">project.task.form.ultimate.gantt</field>
+            <field name="model">project.task</field>
+            <field name="inherit_id" ref="project.view_task_form2"/>
+            <field name="arch" type="xml">
+                <xpath expr="//page[@name='extra_info']" position="after">
+                    <page name="gantt_pro" string="Gantt Pro">
+                        <group>
+                            <group string="Advanced Scheduling">
+                                <field name="scheduling_mode"/>
+                                <field name="scheduling_direction"/>
+                                <field name="effort"/>
+                                <field name="actual_effort"/>
+                                <field name="constraint_type"/>
+                                <field name="constraint_date" invisible="constraint_type in ['none', 'asap', 'alap']"/>
+                                <field name="manually_scheduled"/>
+                                <field name="rollup"/>
+                                <field name="inactive"/>
+                                <field name="is_milestone"/>
+                                <field name="show_in_timeline"/>
+                            </group>
+                            <group string="Resource &amp; Logic">
+                                <field name="calendar_id"/>
+                                <field name="ignore_resource_calendar"/>
+                                <field name="effort_driven"/>
+                                <field name="project_border"/>
+                                <field name="gantt_color" widget="color"/>
+                                <field name="wbs_number"/>
+                                <field name="info"/>
+                            </group>
+                            <group string="Baselines">
+                                <field name="baseline_start_date"/>
+                                <field name="baseline_end_date"/>
+                                <field name="baseline_duration"/>
+                                <field name="baseline_effort"/>
+                                <button name="action_set_baseline" type="object" string="Set Current as Baseline" class="btn-secondary"/>
+                            </group>
+                            <group string="Progress Metrics">
+                                <field name="actual_progress" widget="progressbar"/>
+                                <field name="planned_progress" widget="progressbar"/>
+                                <field name="timesheet_progress" widget="progressbar"/>
+                            </group>
+                            <group string="Critical Path &amp; Variances">
+                                <field name="early_start" readonly="1"/>
+                                <field name="early_end" readonly="1"/>
+                                <field name="late_start" readonly="1"/>
+                                <field name="late_end" readonly="1"/>
+                                <field name="total_slack" readonly="1"/>
+                                <field name="duration_variance" readonly="1"/>
+                                <field name="start_variance" readonly="1"/>
+                                <field name="finish_variance" readonly="1"/>
+                            </group>
+                        </group>
+                        <group string="Notes">
+                            <field name="note" nolabel="1" placeholder="Task notes..."/>
+                        </group>
+                        <group string="Dependencies &amp; Predecessors">
+                            <field name="depend_on_ids" widget="many2many_tags"/>
+                        </group>
+                    </page>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</odoo>

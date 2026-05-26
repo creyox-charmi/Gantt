@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Project Level Gantt View (Standard Enterprise Architecture) -->
+        <record id="view_project_ultimate_gantt" model="ir.ui.view">
+            <field name="name">project.project.ultimate.gantt</field>
+            <field name="model">project.project</field>
+            <field name="priority">1</field>
+            <field name="arch" type="xml">
+                <gantt string="Projects"
+                       js_class="ultimate_gantt"
+                       date_start="date_start"
+                       date_stop="date"
+                       default_scale="month"
+                       scales="day,week,month,year"
+                       color="partner_id"
+                       display_unavailability="1"
+                       default_group_by="user_id"
+                       precision="{'day': 'hour:quarter', 'week': 'day:half', 'month': 'day:half'}">
+                    <field name="name"/>
+                    <field name="partner_id"/>
+                    <field name="user_id"/>
+                    
+                    <templates>
+                        <div t-name="gantt-popover">
+                            <div name="project_name">
+                                <strong>Project — </strong> <t t-esc="name"/>
+                            </div>
+                            <div t-if="user_id"><strong>Project Manager — </strong> <t t-esc="user_id[1]"/></div>
+                            <div t-if="partner_id"><strong>Customer — </strong> <t t-esc="partner_id[1]"/></div>
+                        </div>
+                    </templates>
+                </gantt>
+            </field>
+        </record>
+
+        <!-- Project Form Extension -->
+        <record id="view_project_project_form_ultimate" model="ir.ui.view">
+            <field name="name">project.project.form.ultimate</field>
+            <field name="model">project.project</field>
+            <field name="inherit_id" ref="project.edit_project"/>
+            <field name="arch" type="xml">
+                <xpath expr="//page[@name='settings']" position="after">
+                    <page name="gantt_pro" string="Gantt Pro">
+                        <group>
+                            <group string="Project Baselines">
+                                <field name="baseline_start_date"/>
+                                <field name="baseline_end_date"/>
+                                <button name="action_set_baseline" type="object" string="Set Current as Project Baseline" class="btn-secondary"/>
+                            </group>
+                            <group string="Display Metrics">
+                                <field name="ultimate_duration"/>
+                            </group>
+                        </group>
+                    </page>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</odoo>

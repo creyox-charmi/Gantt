@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="cr_ultimate_gantt_pro.UltimateGanttController">
+        <Layout display="props.display">
+            <t t-set-slot="control-panel-bottom-left">
+                <div class="o_cp_buttons d-flex gap-1" role="toolbar" aria-label="Control panel buttons">
+                    <button type="button" class="btn btn-primary o_gantt_button_add" t-on-click="() => this.action.doAction('project.project_task_action_from_main_menu')">
+                        New Task
+                    </button>
+                </div>
+            </t>
+            <div class="o_ultimate_gantt_content">
+                <t t-component="props.Renderer" model="model" props="props"/>
+            </div>
+        </Layout>
+    </t>
+</templates>
