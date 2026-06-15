@@ -1839,36 +1839,7 @@ export class UltimateGanttRenderer extends Component {
                 </t>
              </div>
         </div>
-    
-             <!-- Scheduling Conflict Modal -->
-             <div t-if="state.conflictModal" class="o_ug_editor_backdrop d-flex justify-content-center align-items-center" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 1050;">
-                 <div class="bg-white rounded shadow-lg d-flex flex-column" style="width: 500px; max-height: 90vh;">
-                     <div class="d-flex justify-content-between align-items-center p-3 border-bottom bg-light" style="border-radius: 4px 4px 0 0;">
-                         <h5 class="m-0 fw-bold text-dark" style="font-size: 16px;">Scheduling conflict</h5>
-                         <button type="button" class="btn-close" t-on-click="() => state.conflictModal = null"/>
-                     </div>
-                     <div class="p-4" style="font-size: 14px; color: #4a5568;">
-                         <p>You moved "<t t-esc="state.conflictModal.t.name"/>" task to start on <t t-esc="state.conflictModal.newStartFmt"/>. This is before the project start date <t t-esc="state.conflictModal.pStartFmt"/>.</p>
-                         <div class="form-check mb-2">
-                             <input class="form-check-input" type="radio" name="conflictChoice" id="cIgnore" value="ignore" t-model="state.conflictModal.choice"/>
-                             <label class="form-check-label" for="cIgnore">Ignore the project border and proceed with the change.</label>
-                         </div>
-                         <div class="form-check mb-2">
-                             <input class="form-check-input" type="radio" name="conflictChoice" id="cHonor" value="honor" t-model="state.conflictModal.choice"/>
-                             <label class="form-check-label" for="cHonor">Adjust the task to honor the project border.</label>
-                         </div>
-                         <div class="form-check">
-                             <input class="form-check-input" type="radio" name="conflictChoice" id="cCancel" value="cancel" t-model="state.conflictModal.choice"/>
-                             <label class="form-check-label" for="cCancel">Cancel the change and do nothing.</label>
-                         </div>
-                     </div>
-                     <div class="d-flex justify-content-end p-3 border-top bg-light" style="gap: 8px; border-radius: 0 0 4px 4px;">
-                         <button class="btn btn-primary shadow-none" style="font-size: 13px; font-weight: 600;" t-on-click="this.onConflictApply">APPLY</button>
-                         <button class="btn btn-light border shadow-none" style="font-size: 13px; font-weight: 600;" t-on-click="() => { state.conflictModal = null; state.drag = null; state.dragOffset = 0; state.dragChainIds = []; }">CANCEL</button>
-                     </div>
-                 </div>
-             </div>
-`;
+    `;
 
     setup() {
         this.tlRef = useRef("timelineSync"); this.sbRef = useRef("sidebarSync");
@@ -1879,7 +1850,7 @@ export class UltimateGanttRenderer extends Component {
         this.state = useState({
             coll: {}, hId: null, drag: null, depDrag: null, rangeOpen: false, settingsOpen: false, uiSettingsOpen: false, taskSearch: "",
             tS: now.startOf('day'), tE: now.endOf('day'), tempS: now.startOf('day').toISODate(), tempE: now.endOf('day').toISODate(),
-            zI: 5, dragOffset: 0, dragChainIds: [], editorTask: null, conflictModal: null, versionsOpen: false, versions: [], showSaveVersion: false, newVersionName: "", activeVersionId: null,
+            zI: 5, dragOffset: 0, dragChainIds: [], editorTask: null, versionsOpen: false, versions: [], showSaveVersion: false, newVersionName: "", activeVersionId: null,
             history: [], redoStack: [], hoverTask: null, hoverBaseline: null, hoverRollupTask: null, mouseX: 0, mouseY: 0,
             sidebarWidth: parseInt(localStorage.getItem("ugp_sb_w") || "450"), timelineOnly: false, viewportWidth: 0,
             editingCell: null,
@@ -3425,54 +3396,7 @@ export class UltimateGanttRenderer extends Component {
             } else { this.state.depDrag.targetId = null; this.state.depDrag.targetName = null; this.state.depDrag.valid = false; }
         }
     }
-    
-    async onConflictApply() {
-        if (!this.state.conflictModal) return;
-        const cm = this.state.conflictModal;
-        if (cm.choice === 'cancel') {
-            this.state.conflictModal = null;
-            this.state.drag = null; this.state.dragOffset = 0; this.state.dragChainIds = [];
-            return;
-        }
-        console.log("[Project Border] Applying Conflict choice:", cm.choice);
-        cm.t.project_border = cm.choice;
-        await this.orm.write("project.task", [cm.t.id], { project_border: cm.choice });
-        let dx = cm.dx;
-        if (cm.choice === 'honor') {
-            dx = cm.pStart.diff(cm.os, 'days').days;
-            if (SCALES[this.state.zI].unit === 'day') dx = Math.round(dx);
-            console.log("[Project Border] Honoring border. New dx:", dx);
-        }
-        this.state.conflictModal = null;
-        this._finishDrag(cm.t, cm.os, cm.OE, cm.chain, dx);
-    }
-
-    _finishDrag(t, os, OE, chain, dx) {
-        // OPTIMISTIC LOCAL UPDATE: Prevent snap-back instantly
-        const newBegin = serializeDateTime(os.plus({ days: dx }));
-        const newEnd = serializeDateTime(OE.plus({ days: dx }));
-        t.planned_date_begin = newBegin; t.date_deadline = newEnd;
-        const vals_list = [{ id: t.id, planned_date_begin: newBegin, date_deadline: newEnd }];
-
-        chain.forEach(item => {
-            const cBegin = serializeDateTime(item.os.plus({ days: dx }));
-            const cEnd = serializeDateTime(item.OE.plus({ days: dx }));
-            item.t.planned_date_begin = cBegin; item.t.date_deadline = cEnd;
-            vals_list.push({ id: item.t.id, planned_date_begin: cBegin, date_deadline: cEnd });
-        });
-
-        // CLEAR DRAG STATE IMMEDIATELY (Visuals are already in sync via model update)
-        this.state.drag = null; this.state.dragOffset = 0; this.state.dragChainIds = [];
-
-        try {
-            this.orm.call("project.task", "action_batch_update_gantt_dates", [vals_list]).then(() => {
-                this.props.model.load(this.props.model.params);
-            }).catch(e => console.warn("Background sync delay", e));
-        } catch (err) {
-            console.error("Batch update failed", err);
-        }
-    }
-async onMU() {
+    async onMU() {
         if (this._winMM) { window.removeEventListener('mousemove', this._winMM); this._winMM = null; }
         if (this._winMU) { window.removeEventListener('mouseup', this._winMU); this._winMU = null; }
 
@@ -3482,31 +3406,31 @@ async onMU() {
             let dx = this.state.dragOffset;
             if (SCALES[this.state.zI].unit === 'day') dx = Math.round(dx);
 
-            // Check project border
-            if (t.project_id && t.project_id.length > 0) {
-                const p = this.props.model.data.find(proj => proj.r_id === t.project_id[0]);
-                console.log("[Project Border Debug] Found Project p:", p, "p.planned_date_begin:", p?.planned_date_begin, "p.date_start:", p?.date_start);
-                let pStart = p && p.planned_date_begin ? deserializeDateTime(p.planned_date_begin) : (p && p.date_start ? deserializeDateTime(p.date_start) : null);
-                let nStartDT = os.plus({ days: dx });
-                console.log("[Project Border] task manually_scheduled?", t.manually_scheduled, "pStart", pStart?.toISODate(), "nStartDT", nStartDT.toISODate(), "borderOption", t.project_border);
-                if (pStart && !t.manually_scheduled && nStartDT < pStart) {
-                    let borderOption = t.project_border || 'ask';
-                    console.log("[Project Border] Violation detected. Option:", borderOption);
-                    if (borderOption === 'honor') {
-                        dx = pStart.diff(os, 'days').days;
-                        console.log("[Project Border] Honoring border. New dx:", dx);
-                    } else if (borderOption === 'ask') {
-                        this.state.conflictModal = {
-                            t, os, OE, chain, dx, pStart,
-                            newStartFmt: nStartDT.toLocaleString(DateTime.DATETIME_SHORT),
-                            pStartFmt: pStart.toLocaleString(DateTime.DATETIME_SHORT),
-                            choice: 'ignore'
-                        };
-                        return; // Wait for modal
-                    }
-                }
+            // OPTIMISTIC LOCAL UPDATE: Prevent snap-back instantly
+            const newBegin = serializeDateTime(os.plus({ days: dx }));
+            const newEnd = serializeDateTime(OE.plus({ days: dx }));
+            t.planned_date_begin = newBegin; t.date_deadline = newEnd;
+            const vals_list = [{ id: t.id, planned_date_begin: newBegin, date_deadline: newEnd }];
+
+            chain.forEach(item => {
+                const cBegin = serializeDateTime(item.os.plus({ days: dx }));
+                const cEnd = serializeDateTime(item.OE.plus({ days: dx }));
+                item.t.planned_date_begin = cBegin; item.t.date_deadline = cEnd;
+                vals_list.push({ id: item.t.id, planned_date_begin: cBegin, date_deadline: cEnd });
+            });
+
+            // CLEAR DRAG STATE IMMEDIATELY (Visuals are already in sync via model update)
+            this.state.drag = null; this.state.dragOffset = 0; this.state.dragChainIds = [];
+
+            try {
+                // Background Sync: No 'await' on UI-blocking path if possible, but Odoo ORM needs to finish.
+                // We wrap it to handle the potential 3s timeout gracefully.
+                this.orm.call("project.task", "action_batch_update_gantt_dates", [vals_list]).then(() => {
+                    this.props.model.load(this.props.model.params);
+                }).catch(e => console.warn("Background sync delay", e));
+            } catch (err) {
+                console.error("Batch update failed", err);
             }
-            this._finishDrag(t, os, OE, chain, dx);
         }
         else if (this.state.depDrag) {
             if (this.state.depDrag.valid && this.state.depDrag.targetId) {

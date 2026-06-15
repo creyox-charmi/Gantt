@@ -560,12 +560,6 @@ export class UltimateGanttRenderer extends Component {
                                                 <input class="form-check-input" type="checkbox" t-att-checked="state.config.gantt_show_baselines" t-on-change="() => { state.config.gantt_show_baselines = !state.config.gantt_show_baselines; this.saveConfig(); }" style="cursor: pointer;"/>
                                             </div>
                                         </div>
-                                        <div class="d-flex align-items-center mt-2">
-                                            <label class="fw-bold text-muted me-auto" style="font-size: 10px;">SHOW ROLLUPS</label>
-                                            <div class="form-check form-switch m-0">
-                                                <input class="form-check-input" type="checkbox" t-att-checked="state.config.gantt_show_rollup" t-on-change="() => { state.config.gantt_show_rollup = !state.config.gantt_show_rollup; this.saveConfig(); }" style="cursor: pointer;"/>
-                                            </div>
-                                        </div>
 
                                         <div class="d-flex align-items-center mt-2">
                                             <label class="fw-bold text-muted me-auto" style="font-size: 10px;">DARK MODE</label>
@@ -657,7 +651,6 @@ export class UltimateGanttRenderer extends Component {
                 <div class="d-flex border rounded bg-white shadow-sm overflow-hidden" style="height: 34px;">
                     <button class="btn btn-light border-0 rounded-0 px-3 fw-bold text-primary" t-on-click="this.setBaseline" style="font-size: 11px;">SET BASELINES</button>
                     <button t-attf-class="btn border-0 rounded-0 border-start px-3 fw-bold {{ state.config.gantt_show_baselines ? 'btn-primary text-white' : 'btn-light text-muted' }}" t-on-click="() => { state.config.gantt_show_baselines = !state.config.gantt_show_baselines; this.saveConfig(); }" style="font-size: 11px;">SHOW BASELINES</button>
-                    <button t-attf-class="btn border-0 rounded-0 border-start px-3 fw-bold {{ state.config.gantt_show_rollup ? 'btn-primary text-white' : 'btn-light text-muted' }}" t-on-click="() => { state.config.gantt_show_rollup = !state.config.gantt_show_rollup; this.saveConfig(); }" style="font-size: 11px;">SHOW ROLLUPS</button>
                 </div>
 
                 <div class="ms-auto d-flex align-items-center gap-2">
@@ -1186,14 +1179,6 @@ export class UltimateGanttRenderer extends Component {
                         <t t-foreach="this.visibleProjects" t-as="p" t-key="'tl_p_'+p.id">
                             <div class="o_ug_row o_ug_project_row" t-att-data-id="'proj_'+p.r_id" t-att-style="'height: '+state.config.gantt_row_height+'px; width: '+this.totalGridWidth+'px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; position: relative;'" t-on-mouseenter="() => this.onPEnter(p)" t-on-mouseleave="this.onPLeave" t-att-class="{ 'o_ug_row_hover': state.hId === p.id }">
                                 <t t-set="ps" t-value="this.getStyle(p)"/>
-                                <t t-if="state.config.gantt_show_rollup">
-                                    <t t-set="rws" t-value="this.getRollupWrapStyle(p)"/>
-                                    <div t-if="rws" class="ug_rollup_wrap" t-att-style="rws">
-                                        <t t-foreach="p.tasks || []" t-as="rt" t-key="'r_'+rt.id">
-                                            <div t-if="rt.planned_date_begin || rt.date_start" class="ug_rollup_bar" t-att-style="this.getRollupStyle(rt)" t-on-mouseenter="(ev)=>this.onREnter(ev, rt)" t-on-mouseleave="(ev)=>this.onRLeave(ev)"/>
-                                        </t>
-                                    </div>
-                                </t>
                                 <t t-if="state.config.gantt_show_baselines">
                                     <t t-set="bws" t-value="this.getBaselineWrapStyle(p)"/>
                                     <t t-set="bs" t-value="this.getBaselineStyle(p)"/>
@@ -1203,7 +1188,7 @@ export class UltimateGanttRenderer extends Component {
                                         <div class="ug_task_baseline" t-att-style="bs + ' height: 3px;'"/>
                                     </div>
                                 </t>
-                                <div t-if="ps" class="o_gantt_pill_wrapper o_ug_project_summary" t-att-style="ps" t-on-dblclick="() => this.openProjectEditor(p)">
+                                <div t-if="ps" class="o_gantt_pill_wrapper o_ug_project_summary" t-att-style="ps">
                                 </div>
                                 <span class="ps-2 text-muted" style="font-size:10px; z-index:11; font-weight:bold;"><t t-esc="p.name"/></span>
                             </div>
@@ -1213,7 +1198,7 @@ export class UltimateGanttRenderer extends Component {
 
                                      <div t-if="ts" t-attf-class="o_gantt_pill_wrapper o_draggable {{ t.children &amp;&amp; t.children.length > 0 &amp;&amp; !t.is_milestone ? 'o_ug_summary' : '' }} {{ t.children &amp;&amp; t.children.length > 0 &amp;&amp; !t.is_milestone &amp;&amp; t.isCritical &amp;&amp; state.config.gantt_show_critical_path ? 'o_ug_summary_critical' : '' }}" t-att-style="ts + ' overflow: visible !important;'" t-on-mousedown="(ev)=>this.onBMD(ev,t)" t-on-dblclick="() => this.openTaskEditor(t)">
 <t t-if="(!t.children || t.children.length === 0) and !t.is_milestone">
-                                            <div t-attf-class="o_gantt_pill {{ t.gantt_color ? 'o_ug_custom_color' : '' }} {{ t.isCritical and state.config.gantt_show_critical_path ? 'o_gantt_pill_critical ripple-danger' : 'o_gantt_pill_tan' }} w-100 h-100 d-flex align-items-center" t-att-style="(t.gantt_color &amp;&amp; !(t.isCritical &amp;&amp; state.config.gantt_show_critical_path) ? '--pill-color:' + t.gantt_color + ' !important; background-color:' + t.gantt_color + ' !important; color: #1e293b !important;' : '') + 'height: '+(state.config.gantt_show_baselines ? 13 : (state.config.gantt_row_height - 2*state.config.gantt_bar_margin))+'px !important; margin-top: 0px !important; border-radius: 4px;'">
+                                            <div t-attf-class="o_gantt_pill {{ t.gantt_color ? 'o_ug_custom_color' : '' }} {{ t.isCritical and state.config.gantt_show_critical_path ? 'o_gantt_pill_critical ripple-danger' : 'o_gantt_pill_tan' }} w-100 h-100 d-flex align-items-center" t-att-style="(t.gantt_color &amp;&amp; !(t.isCritical &amp;&amp; state.config.gantt_show_critical_path) ? '--pill-color:' + t.gantt_color + ' !important; background-color:' + t.gantt_color + ' !important; color: #1e293b !important;' : '') + 'height: '+(state.config.gantt_show_baselines ? Math.floor((state.config.gantt_row_height - 2*state.config.gantt_bar_margin) * 0.45) : (state.config.gantt_row_height - 2*state.config.gantt_bar_margin))+'px !important;'">
                                                  <div t-if="state.config.gantt_enable_dep_draw" class="o_ug_dep_handle o_ug_handle_l" t-on-mousedown.stop="(ev)=>this.onDepStart(ev,t,'l')"/>
                                                  <div t-if="state.depDrag and state.depDrag.targetId === t.id" class="o_ug_dep_handle o_ug_handle_r" style="opacity:1; border-color:#22c55e; transform: translateY(-50%) scale(1.1);"/>
                                                  <div class="o_gantt_progress" t-att-style="'width: '+t.actual_progress+'%;'"/>
@@ -1235,9 +1220,9 @@ export class UltimateGanttRenderer extends Component {
                                                <t t-set="tbs3" t-value="this.getBaselineStyle3(t)"/>
                                                <t t-if="tbws">
                                                    <div class="ug_baseline_wrap" t-att-style="tbws">
-                                                       <t t-if="tbs1"><div class="ug_task_baseline" t-att-style="tbs1" t-on-mouseenter="(ev)=>this.onBEnter(ev, t, 1)" t-on-mouseleave="(ev)=>this.onBLeave(ev)"/></t>
-                                                       <t t-if="tbs2"><div class="ug_task_baseline" t-att-style="tbs2" t-on-mouseenter="(ev)=>this.onBEnter(ev, t, 2)" t-on-mouseleave="(ev)=>this.onBLeave(ev)"/></t>
-                                                       <t t-if="tbs3"><div class="ug_task_baseline" t-att-style="tbs3" t-on-mouseenter="(ev)=>this.onBEnter(ev, t, 3)" t-on-mouseleave="(ev)=>this.onBLeave(ev)"/></t>
+                                                       <t t-if="tbs1"><div class="ug_task_baseline" t-att-style="tbs1"/></t>
+                                                       <t t-if="tbs2"><div class="ug_task_baseline" t-att-style="tbs2"/></t>
+                                                       <t t-if="tbs3"><div class="ug_task_baseline" t-att-style="tbs3"/></t>
                                                    </div>
                                                </t>
                                            </t>
@@ -1296,7 +1281,7 @@ export class UltimateGanttRenderer extends Component {
                                             </div>
                                         </div>
                                     </div>
-
+                                    
                                     <div class="position-relative text-center my-4">
                                         <hr class="text-secondary opacity-25" style="border-top: 1px solid; margin: 0;"/>
                                         <span class="bg-white px-3 text-muted position-absolute" style="top: -10px; left: 50%; transform: translateX(-50%); font-size: 12px;">Dates</span>
@@ -1371,7 +1356,7 @@ export class UltimateGanttRenderer extends Component {
                                                          <tr>
                                                              <td style="overflow: visible !important;">
                                                                   <div class="position-relative w-100 h-100" style="overflow: visible !important;">
-                                                                     <div class="d-flex align-items-center justify-content-between px-2 w-100 h-100 cursor-pointer"
+                                                                     <div class="d-flex align-items-center justify-content-between px-2 w-100 h-100 cursor-pointer" 
                                                                           style="min-height: 36px;"
                                                                           t-on-click.stop="() => this.togglePredDropdown(pId)">
                                                                           <span class="text-truncate text-dark" style="font-size: 13px;">
@@ -1382,7 +1367,7 @@ export class UltimateGanttRenderer extends Component {
                                                                           </span>
                                                                           <i class="fa fa-caret-down text-muted ms-1" style="font-size: 11px;"/>
                                                                      </div>
-                                                                     <div t-if="state.openPredDropdownId === pId"
+                                                                     <div t-if="state.openPredDropdownId === pId" 
                                                                           class="position-absolute bg-white border rounded shadow-lg py-1 mt-1 w-100 o_ug_custom_dropdown_menu"
                                                                           style="top: 100%; left: 0; z-index: 1050; max-height: 200px; overflow-y: auto;">
                                                                           <t t-foreach="this.props.model.allTasksList" t-as="ot" t-key="ot.id">
@@ -1398,7 +1383,7 @@ export class UltimateGanttRenderer extends Component {
                                                              </td>
                                                              <td style="overflow: visible !important; padding: 4px 8px !important;">
                                                                   <div class="position-relative w-100 h-100" style="overflow: visible !important;">
-                                                                      <div class="d-flex align-items-center justify-content-between px-2 w-100 h-100 cursor-pointer o_ug_type_select shadow-none"
+                                                                      <div class="d-flex align-items-center justify-content-between px-2 w-100 h-100 cursor-pointer o_ug_type_select shadow-none" 
                                                                            style="min-height: 36px;"
                                                                            t-on-click.stop="() => this.togglePredTypeDropdown(pId)">
                                                                            <span class="text-truncate text-dark" style="font-size: 13px;">
@@ -1410,7 +1395,7 @@ export class UltimateGanttRenderer extends Component {
                                                                            </span>
                                                                            <i class="fa fa-caret-down text-muted ms-1" style="font-size: 11px;"/>
                                                                       </div>
-                                                                      <div t-if="state.openPredTypeDropdownId === pId"
+                                                                      <div t-if="state.openPredTypeDropdownId === pId" 
                                                                            class="position-absolute bg-white border rounded shadow-lg py-1 mt-1 w-100 o_ug_custom_dropdown_menu"
                                                                            style="top: 100%; left: 0; z-index: 1050; max-height: 200px; overflow-y: auto;">
                                                                            <div class="px-3 py-2 cursor-pointer o_ug_custom_dropdown_item" t-att-class="this.getPredType(pId) === 'FS' ? 'active' : ''" t-on-click.stop="() => this.selectPredType(pId, 'FS')">Finish-to-Start (FS)</div>
@@ -1456,7 +1441,7 @@ export class UltimateGanttRenderer extends Component {
                                                           <tr style="cursor: pointer; background: white;" class="border-bottom" t-attf-class="{{state.selectedSucc === sId ? 'table-primary' : ''}}" t-on-click.stop="() => state.selectedSucc = sId">
                                                               <td class="p-0 border-end" style="vertical-align: middle; overflow: visible !important;">
                                                                   <div class="position-relative w-100 h-100" style="overflow: visible !important;">
-                                                                      <div class="d-flex align-items-center justify-content-between px-2 w-100 h-100 cursor-pointer"
+                                                                      <div class="d-flex align-items-center justify-content-between px-2 w-100 h-100 cursor-pointer" 
                                                                            style="min-height: 36px;"
                                                                            t-on-click.stop="() => this.toggleSuccDropdown(sId)">
                                                                            <span class="text-truncate text-dark" style="font-size: 13px;">
@@ -1467,7 +1452,7 @@ export class UltimateGanttRenderer extends Component {
                                                                            </span>
                                                                            <i class="fa fa-caret-down text-muted ms-1" style="font-size: 11px;"/>
                                                                       </div>
-                                                                      <div t-if="state.openSuccDropdownId === sId"
+                                                                      <div t-if="state.openSuccDropdownId === sId" 
                                                                            class="position-absolute bg-white border rounded shadow-lg py-1 mt-1 w-100 o_ug_custom_dropdown_menu"
                                                                            style="top: 100%; left: 0; z-index: 1050; max-height: 200px; overflow-y: auto;">
                                                                           <t t-foreach="this.props.model.allTasksList" t-as="ot" t-key="ot.id">
@@ -1483,7 +1468,7 @@ export class UltimateGanttRenderer extends Component {
                                                               </td>
                                                               <td class="border-end text-center" style="vertical-align: middle; padding: 4px 8px !important; overflow: visible !important;">
                                                                   <div class="position-relative w-100 h-100" style="overflow: visible !important;">
-                                                                      <div class="d-flex align-items-center justify-content-between px-2 w-100 h-100 cursor-pointer o_ug_type_select shadow-none"
+                                                                      <div class="d-flex align-items-center justify-content-between px-2 w-100 h-100 cursor-pointer o_ug_type_select shadow-none" 
                                                                            style="min-height: 36px;"
                                                                            t-on-click.stop="() => this.toggleSuccTypeDropdown(sId)">
                                                                            <span class="text-truncate text-dark" style="font-size: 13px;">
@@ -1495,7 +1480,7 @@ export class UltimateGanttRenderer extends Component {
                                                                            </span>
                                                                            <i class="fa fa-caret-down text-muted ms-1" style="font-size: 11px;"/>
                                                                       </div>
-                                                                      <div t-if="state.openSuccTypeDropdownId === sId"
+                                                                      <div t-if="state.openSuccTypeDropdownId === sId" 
                                                                            class="position-absolute bg-white border rounded shadow-lg py-1 mt-1 w-100 o_ug_custom_dropdown_menu"
                                                                            style="top: 100%; left: 0; z-index: 1050; max-height: 200px; overflow-y: auto;">
                                                                            <div class="px-3 py-2 cursor-pointer o_ug_custom_dropdown_item" t-att-class="this.getSuccType(sId) === 'FS' ? 'active' : ''" t-on-click.stop="() => this.selectSuccType(sId, 'FS')">Finish-to-Start (FS)</div>
@@ -1780,95 +1765,31 @@ export class UltimateGanttRenderer extends Component {
              </div>
 
              <!-- TOOLTIP -->
-             <div t-if="state.hoverTask or state.hoverRollupTask" class="o_ug_tooltip" t-att-style="'left: '+state.mouseX+'px; top: '+state.mouseY+'px;'">
-                <t t-if="state.hoverRollupTask">
-                    <div class="o_ug_tooltip_header"><t t-esc="state.hoverRollupTask.name"/> (Rollup)</div>
-                    <div class="o_ug_tooltip_row">
-                        <span class="o_ug_tooltip_label">Start:</span>
-                        <span class="o_ug_tooltip_val"><t t-esc="state.hoverRollupTask.planned_date_begin ? state.hoverRollupTask.planned_date_begin.split(' ')[0] : ''"/></span>
-                    </div>
-                    <div class="o_ug_tooltip_row">
-                        <span class="o_ug_tooltip_label">End:</span>
-                        <span class="o_ug_tooltip_val"><t t-esc="state.hoverRollupTask.date_deadline ? state.hoverRollupTask.date_deadline.split(' ')[0] : ''"/></span>
-                    </div>
-                    <div class="o_ug_tooltip_row">
-                        <span class="o_ug_tooltip_label">Duration:</span>
-                        <span class="o_ug_tooltip_val"><t t-esc="state.hoverRollupTask.real_duration"/></span>
-                    </div>
-                </t>
-                <t t-elif="state.hoverBaseline">
-                    <div class="o_ug_tooltip_header"><t t-esc="state.hoverTask.name"/> (baseline <t t-esc="state.hoverBaseline"/>)</div>
-                    <t t-set="bs_key" t-value="state.hoverBaseline === 1 ? 'baseline_start_date' : (state.hoverBaseline === 2 ? 'baseline2_start_date' : 'baseline3_start_date')"/>
-                    <t t-set="be_key" t-value="state.hoverBaseline === 1 ? 'baseline_end_date' : (state.hoverBaseline === 2 ? 'baseline2_end_date' : 'baseline3_end_date')"/>
-                    <t t-set="bs_val" t-value="state.hoverTask[bs_key]"/>
-                    <t t-set="be_val" t-value="state.hoverTask[be_key]"/>
-                    <t t-if="!bs_val or bs_val == 'False'"><t t-set="bs_val" t-value="state.hoverTask.planned_date_begin or state.hoverTask.date_start"/></t>
-                    <t t-if="!be_val or be_val == 'False'"><t t-set="be_val" t-value="state.hoverTask.date_deadline or state.hoverTask.date"/></t>
-
-                    <div class="o_ug_tooltip_row">
-                        <span class="o_ug_tooltip_label">Start:</span>
-                        <span class="o_ug_tooltip_val"><t t-esc="bs_val ? bs_val.split(' ')[0] : ''"/></span>
-                    </div>
-                    <div class="o_ug_tooltip_row">
-                        <span class="o_ug_tooltip_label">End:</span>
-                        <span class="o_ug_tooltip_val"><t t-esc="be_val ? be_val.split(' ')[0] : ''"/></span>
-                    </div>
-                </t>
-                <t t-else="">
-                    <div class="o_ug_tooltip_header"><t t-esc="state.hoverTask.name"/></div>
-                    <div class="o_ug_tooltip_row">
-                        <span class="o_ug_tooltip_label">Start:</span>
-                        <span class="o_ug_tooltip_val"><t t-esc="state.hoverTask.planned_date_begin ? state.hoverTask.planned_date_begin.split(' ')[0] : ''"/></span>
-                    </div>
-                    <div class="o_ug_tooltip_row">
-                        <span class="o_ug_tooltip_label">End:</span>
-                        <span class="o_ug_tooltip_val"><t t-esc="state.hoverTask.date_deadline ? state.hoverTask.date_deadline.split(' ')[0] : ''"/></span>
-                    </div>
-                    <div class="o_ug_tooltip_row">
-                        <span class="o_ug_tooltip_label">Duration:</span>
-                        <span class="o_ug_tooltip_val"><t t-esc="state.hoverTask.real_duration"/></span>
-                    </div>
-                    <div class="o_ug_tooltip_row" t-if="state.hoverTask.baseline_start_date and state.hoverTask.baseline_start_date != 'False'">
-                        <span class="o_ug_tooltip_label">Baseline:</span>
-                        <span class="o_ug_tooltip_val"><t t-esc="state.hoverTask.baseline_start_date.split(' ')[0]"/></span>
-                    </div>
-                    <div class="o_ug_tooltip_row">
-                        <span class="o_ug_tooltip_label">Complete:</span>
-                        <span class="o_ug_tooltip_val"><t t-esc="Math.round(state.hoverTask.actual_progress || 0)"/>%</span>
-                    </div>
-                </t>
+             <div t-if="state.hoverTask" class="o_ug_tooltip" t-att-style="'left: '+state.mouseX+'px; top: '+state.mouseY+'px;'">
+                <div class="o_ug_tooltip_header"><t t-esc="state.hoverTask.name"/></div>
+                <div class="o_ug_tooltip_row">
+                    <span class="o_ug_tooltip_label">Start:</span>
+                    <span class="o_ug_tooltip_val"><t t-esc="state.hoverTask.planned_date_begin.split(' ')[0]"/></span>
+                </div>
+                <div class="o_ug_tooltip_row">
+                    <span class="o_ug_tooltip_label">End:</span>
+                    <span class="o_ug_tooltip_val"><t t-esc="state.hoverTask.date_deadline.split(' ')[0]"/></span>
+                </div>
+                <div class="o_ug_tooltip_row">
+                    <span class="o_ug_tooltip_label">Duration:</span>
+                    <span class="o_ug_tooltip_val"><t t-esc="state.hoverTask.real_duration"/></span>
+                </div>
+                <div class="o_ug_tooltip_row" t-if="state.hoverTask.baseline_start_date">
+                    <span class="o_ug_tooltip_label">Baseline:</span>
+                    <span class="o_ug_tooltip_val"><t t-esc="state.hoverTask.baseline_start_date.split(' ')[0]"/></span>
+                </div>
+                <div class="o_ug_tooltip_row">
+                    <span class="o_ug_tooltip_label">Complete:</span>
+                    <span class="o_ug_tooltip_val"><t t-esc="Math.round(state.hoverTask.actual_progress || 0)"/>%</span>
+                </div>
              </div>
         </div>
-    
-             <!-- Scheduling Conflict Modal -->
-             <div t-if="state.conflictModal" class="o_ug_editor_backdrop d-flex justify-content-center align-items-center" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 1050;">
-                 <div class="bg-white rounded shadow-lg d-flex flex-column" style="width: 500px; max-height: 90vh;">
-                     <div class="d-flex justify-content-between align-items-center p-3 border-bottom bg-light" style="border-radius: 4px 4px 0 0;">
-                         <h5 class="m-0 fw-bold text-dark" style="font-size: 16px;">Scheduling conflict</h5>
-                         <button type="button" class="btn-close" t-on-click="() => state.conflictModal = null"/>
-                     </div>
-                     <div class="p-4" style="font-size: 14px; color: #4a5568;">
-                         <p>You moved "<t t-esc="state.conflictModal.t.name"/>" task to start on <t t-esc="state.conflictModal.newStartFmt"/>. This is before the project start date <t t-esc="state.conflictModal.pStartFmt"/>.</p>
-                         <div class="form-check mb-2">
-                             <input class="form-check-input" type="radio" name="conflictChoice" id="cIgnore" value="ignore" t-model="state.conflictModal.choice"/>
-                             <label class="form-check-label" for="cIgnore">Ignore the project border and proceed with the change.</label>
-                         </div>
-                         <div class="form-check mb-2">
-                             <input class="form-check-input" type="radio" name="conflictChoice" id="cHonor" value="honor" t-model="state.conflictModal.choice"/>
-                             <label class="form-check-label" for="cHonor">Adjust the task to honor the project border.</label>
-                         </div>
-                         <div class="form-check">
-                             <input class="form-check-input" type="radio" name="conflictChoice" id="cCancel" value="cancel" t-model="state.conflictModal.choice"/>
-                             <label class="form-check-label" for="cCancel">Cancel the change and do nothing.</label>
-                         </div>
-                     </div>
-                     <div class="d-flex justify-content-end p-3 border-top bg-light" style="gap: 8px; border-radius: 0 0 4px 4px;">
-                         <button class="btn btn-primary shadow-none" style="font-size: 13px; font-weight: 600;" t-on-click="this.onConflictApply">APPLY</button>
-                         <button class="btn btn-light border shadow-none" style="font-size: 13px; font-weight: 600;" t-on-click="() => { state.conflictModal = null; state.drag = null; state.dragOffset = 0; state.dragChainIds = []; }">CANCEL</button>
-                     </div>
-                 </div>
-             </div>
-`;
+    `;
 
     setup() {
         this.tlRef = useRef("timelineSync"); this.sbRef = useRef("sidebarSync");
@@ -1879,8 +1800,8 @@ export class UltimateGanttRenderer extends Component {
         this.state = useState({
             coll: {}, hId: null, drag: null, depDrag: null, rangeOpen: false, settingsOpen: false, uiSettingsOpen: false, taskSearch: "",
             tS: now.startOf('day'), tE: now.endOf('day'), tempS: now.startOf('day').toISODate(), tempE: now.endOf('day').toISODate(),
-            zI: 5, dragOffset: 0, dragChainIds: [], editorTask: null, conflictModal: null, versionsOpen: false, versions: [], showSaveVersion: false, newVersionName: "", activeVersionId: null,
-            history: [], redoStack: [], hoverTask: null, hoverBaseline: null, hoverRollupTask: null, mouseX: 0, mouseY: 0,
+            zI: 5, dragOffset: 0, dragChainIds: [], editorTask: null, versionsOpen: false, versions: [], showSaveVersion: false, newVersionName: "", activeVersionId: null,
+            history: [], redoStack: [], hoverTask: null, mouseX: 0, mouseY: 0,
             sidebarWidth: parseInt(localStorage.getItem("ugp_sb_w") || "450"), timelineOnly: false, viewportWidth: 0,
             editingCell: null,
             colResize: null,
@@ -1979,39 +1900,39 @@ export class UltimateGanttRenderer extends Component {
         this.props.model.data.forEach(p => p.tasks.forEach(t => {
             if (t) graph[t.id] = t.depend_on_ids || [];
         }));
-
+        
         if (isSuccessorEdit) {
             // If editing successors of taskId, it means targetIds now depend on taskId
             targetIds.forEach(targetId => {
                 if (!graph[targetId]) graph[targetId] = [];
                 if (!graph[targetId].includes(taskId)) graph[targetId] = [...graph[targetId], taskId];
             });
-            // We also need to remove taskId from tasks that were previously successors but aren't anymore,
+            // We also need to remove taskId from tasks that were previously successors but aren't anymore, 
             // but for cycle detection, over-approximating (leaving old ones) is safe and stricter.
         } else {
             // Editing predecessors
             graph[taskId] = targetIds;
         }
-
+        
         const visited = new Set();
         const recStack = new Set();
-
+        
         const dfs = (node) => {
             if (recStack.has(node)) return true;
             if (visited.has(node)) return false;
-
+            
             visited.add(node);
             recStack.add(node);
-
+            
             const deps = graph[node] || [];
             for (let i = 0; i < deps.length; i++) {
                 if (dfs(deps[i])) return true;
             }
-
+            
             recStack.delete(node);
             return false;
         };
-
+        
         for (let node in graph) {
             if (dfs(Number(node))) return true;
         }
@@ -2073,14 +1994,14 @@ export class UltimateGanttRenderer extends Component {
         if (!confirm("Are you sure you want to recalculate and set baselines for all tasks in this view?")) return;
         const taskIds = this.props.model.allTasksList.map(t => t.id);
         const pIds = (this.props.model.data || []).map(p => p.r_id);
-
+        
         if (pIds.length > 0) {
             await this.orm.call("project.project", "action_set_baseline", [pIds]);
         }
         if (taskIds.length > 0) {
             await this.orm.call("project.task", "action_set_baseline", [taskIds]);
         }
-
+        
         await this.props.model.load(this.props.model.params);
     }
     onCombinedSplitterClick(ev) {
@@ -2262,22 +2183,22 @@ export class UltimateGanttRenderer extends Component {
         const s = this.state.taskSearch.toLowerCase();
         const cf = this.state.customFilter;
         return (this.props.model.data || []).map(p => {
-            let v = [];
-            if (!this.state.coll['proj_' + p.r_id] && p.tasks) {
-                let sD = -1;
-                for (let t of p.tasks) {
-                    if (sD !== -1 && t.depth > sD) continue;
-                    sD = -1;
+            let v = []; 
+            if (!this.state.coll['proj_' + p.r_id] && p.tasks) { 
+                let sD = -1; 
+                for (let t of p.tasks) { 
+                    if (sD !== -1 && t.depth > sD) continue; 
+                    sD = -1; 
                     let keep = true;
                     if (s && !t.name.toLowerCase().includes(s)) keep = false;
-
+                    
                     if (keep && cf) {
                         let fval = (t.name || '').toLowerCase();
                         let dval = (t.planned_date_begin || '').split(' ')[0];
                         let cval = (cf.value || '').toLowerCase();
                         let isDate = cf.op.includes('Time') || cf.op === 'Before' || cf.op === 'After' || cf.op === 'Today' || cf.op === 'Tomorrow' || cf.op === 'Yesterday' || cf.op.includes('week') || cf.op.includes('month') || cf.op.includes('year');
                         let target = isDate ? dval : fval;
-
+                        
                         if (cf.op === 'Equals') keep = target === cval;
                         else if (cf.op === 'Does not equal') keep = target !== cval;
                         else if (cf.op === 'Empty') keep = target === '';
@@ -2291,12 +2212,12 @@ export class UltimateGanttRenderer extends Component {
                              keep = dval !== '';
                         }
                     }
-
-                    if (keep) {
-                        v.push(t);
-                        if (this.state.coll['task_' + t.id]) sD = t.depth;
-                    }
-                }
+                    
+                    if (keep) { 
+                        v.push(t); 
+                        if (this.state.coll['task_' + t.id]) sD = t.depth; 
+                    } 
+                } 
             }
             return { ...p, visibleTasks: v };
         }).filter(p => !s || p.visibleTasks.length > 0 || p.name.toLowerCase().includes(s));
@@ -2319,65 +2240,44 @@ export class UltimateGanttRenderer extends Component {
         if (t.is_milestone) return `left:${l - 9}px; width:18px;`;
         return `left:${l}px; width:${Math.max(w, 5)}px;`;
     }
-
-    getRollupWrapStyle(t) {
-        let rowH = this.state.config.gantt_row_height || 52;
-        let taskH = 13;
-        let taskTop = (rowH - taskH) / 2;
-        let topOffset = taskTop + taskH + 1; // 1px gap below centered task bar
-        return `position:absolute; width:100%; top:${topOffset}px; height: 4px; z-index:9; pointer-events:none;`;
-    }
-
-    getRollupStyle(t) {
-        let px = SCALES[this.state.zI].px; const dDiff = Math.abs(Math.round(this.state.tE.diff(this.state.tS, 'days').days));
-        if (this.state.zI === 2 || dDiff > 350) px = (this.totalGridWidth) / 365.25; else if (SCALES[this.state.zI].unit === 'day' && dDiff <= 7) px = 180;
-        let sStr = t.planned_date_begin || t.date_start; let eStr = t.date_deadline || t.date;
-        if (!sStr || !eStr) return null;
-        let s = deserializeDateTime(sStr), e = deserializeDateTime(eStr);
-        if (!s || !e) return null;
-        let l = (s.diff(this.state.tS).as('days')) * px, w = (e.diff(s).as('days')) * px;
-        return `left:${l}px; width:${Math.max(w, 5)}px; background: #60a5fa; position: absolute; top: 0px; height: 3px; border-radius: 1px; box-sizing: border-box; pointer-events: auto;`;
-    }
-
+    
     getBaselineWrapStyle(t) {
         let sStr = t.baseline_start_date;
         if (!sStr || sStr === 'False') sStr = t.planned_date_begin || t.date_start;
         let eStr = t.baseline_end_date;
         if (!eStr || eStr === 'False') eStr = t.date_deadline || t.date;
-
+        
         if (!sStr || !eStr) return null;
-
+        
         let rowH = this.state.config.gantt_row_height || 52;
+        let margin = this.state.config.gantt_bar_margin || 8;
         let isSummary = (t.r_id || (t.children && t.children.length > 0 && !t.is_milestone));
-
-        let taskH = 13;
-        let taskTop = (rowH - taskH) / 2; // Because task bar has top: 50%, transform: translateY(-50%)
-        let bHeight = 11; // 3 + 1 + 3 + 1 + 3
-        let rHeight = (this.state.config.gantt_show_rollup && isSummary) ? 4 : 0;
-        let topOffset = taskTop + taskH + 1 + rHeight; // 1px gap below the task bar (or rollups)
-
+        
+        let bHeight = 8;
+        let topOffset = rowH - margin - bHeight + 4; // Anchor to the very bottom
+        
         if (isSummary) {
+            topOffset = (rowH / 2) + 6;
             bHeight = 4; // thinner for summary
         }
-
+        
         return `display: flex; flex-direction: column; position: absolute; top: ${topOffset}px; left: 0px; height: ${bHeight}px; width: 100%; z-index: 9999; pointer-events: none;`;
     }
-
+    
     getBaselineStyle(t) {
         let sStr = t.baseline_start_date;
         if (!sStr || sStr === 'False') sStr = t.planned_date_begin || t.date_start;
         let eStr = t.baseline_end_date;
         if (!eStr || eStr === 'False') eStr = t.date_deadline || t.date;
-
+        
         if (!sStr || !eStr) return null;
         let px = SCALES[this.state.zI].px; const dDiff = Math.abs(Math.round(this.state.tE.diff(this.state.tS, 'days').days));
         if (this.state.zI === 2 || dDiff > 350) px = (this.totalGridWidth) / 365.25; else if (SCALES[this.state.zI].unit === 'day' && dDiff <= 7) px = 180;
         let s = deserializeDateTime(sStr), e = deserializeDateTime(eStr);
         if (!s || !e) return null;
         let l = (s.diff(this.state.tS).as('days')) * px, w = (e.diff(s).as('days')) * px;
-
-        console.log(`[Baseline 1] Task: "${t.name}" | Start Date: ${sStr} | Left Position: ${l}px`);
-        return `left:${l}px; width:${Math.max(w, 5)}px; background: #b8c2cc; position: absolute; top: 0px; height: 3px; border-radius: 1px; box-sizing: border-box; z-index: 10; pointer-events: auto;`;
+        
+        return `left:${l}px; width:${Math.max(w, 5)}px; background: #b8c2cc; position: absolute; top: 0px; height: 2px; border-radius: 3px; box-sizing: border-box; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05); z-index: 10;`;
     }
 
     getBaselineStyle2(t) {
@@ -2385,16 +2285,15 @@ export class UltimateGanttRenderer extends Component {
         if (!sStr || sStr === 'False') sStr = t.planned_date_begin || t.date_start;
         let eStr = t.baseline2_end_date;
         if (!eStr || eStr === 'False') eStr = t.date_deadline || t.date;
-
+        
         if (!sStr || !eStr) return null;
         let px = SCALES[this.state.zI].px; const dDiff = Math.abs(Math.round(this.state.tE.diff(this.state.tS, 'days').days));
         if (this.state.zI === 2 || dDiff > 350) px = (this.totalGridWidth) / 365.25; else if (SCALES[this.state.zI].unit === 'day' && dDiff <= 7) px = 180;
         let s = deserializeDateTime(sStr), e = deserializeDateTime(eStr);
         if (!s || !e) return null;
         let l = (s.diff(this.state.tS).as('days')) * px, w = (e.diff(s).as('days')) * px;
-
-        console.log(`[Baseline 2] Task: "${t.name}" | Start Date: ${sStr} | Left Position: ${l}px`);
-        return `left:${l}px; width:${Math.max(w, 5)}px; background: #b8c2cc; position: absolute; top: 4px; height: 3px; border-radius: 1px; box-sizing: border-box; z-index: 10; pointer-events: auto;`;
+        
+        return `left:${l}px; width:${Math.max(w, 5)}px; background: #b8c2cc; position: absolute; top: 3px; height: 2px; border-radius: 3px; box-sizing: border-box; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05); z-index: 10;`;
     }
 
     getBaselineStyle3(t) {
@@ -2402,16 +2301,15 @@ export class UltimateGanttRenderer extends Component {
         if (!sStr || sStr === 'False') sStr = t.planned_date_begin || t.date_start;
         let eStr = t.baseline3_end_date;
         if (!eStr || eStr === 'False') eStr = t.date_deadline || t.date;
-
+        
         if (!sStr || !eStr) return null;
         let px = SCALES[this.state.zI].px; const dDiff = Math.abs(Math.round(this.state.tE.diff(this.state.tS, 'days').days));
         if (this.state.zI === 2 || dDiff > 350) px = (this.totalGridWidth) / 365.25; else if (SCALES[this.state.zI].unit === 'day' && dDiff <= 7) px = 180;
         let s = deserializeDateTime(sStr), e = deserializeDateTime(eStr);
         if (!s || !e) return null;
         let l = (s.diff(this.state.tS).as('days')) * px, w = (e.diff(s).as('days')) * px;
-
-        console.log(`[Baseline 3] Task: "${t.name}" | Start Date: ${sStr} | Left Position: ${l}px`);
-        return `left:${l}px; width:${Math.max(w, 5)}px; background: #b8c2cc; position: absolute; top: 8px; height: 3px; border-radius: 1px; box-sizing: border-box; z-index: 10; pointer-events: auto;`;
+        
+        return `left:${l}px; width:${Math.max(w, 5)}px; background: #b8c2cc; position: absolute; top: 6px; height: 2px; border-radius: 3px; box-sizing: border-box; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05); z-index: 10;`;
     }
 
     getLuxonDate(dateStr) {
@@ -2427,44 +2325,35 @@ export class UltimateGanttRenderer extends Component {
             this.state.editingCell.val = this.state.editingCell.val.filter(x => x !== id);
         }
     }
-
-    openProjectEditor(p) {
-        if (!p.r_id) return;
-        this.openTaskEditor(p);
-    }
-
     async openTaskEditor(t) {
         this.state.editorTab = 'general';
-        const successors = !t.is_project ? (this.getTaskSuccessors(t.id) || []) : [];
+        const successors = this.getTaskSuccessors(t.id) || [];
         this.state.openPredDropdownId = null;
         this.state.openSuccDropdownId = null;
         this.state.openPredTypeDropdownId = null;
         this.state.openSuccTypeDropdownId = null;
         this.state.selectedSucc = null;
 
-        let depTypes = {};
-        let succDepTypes = {};
+        // Fetch predecessor dependency records to extract types and lags
+        const deps = await this.orm.searchRead("project.task.dependency", [["task_id", "=", t.id]], ["depends_on_id", "dependency_type", "lag"]);
+        const depTypes = {};
+        deps.forEach(d => {
+            const predId = Array.isArray(d.depends_on_id) ? d.depends_on_id[0] : d.depends_on_id;
+            depTypes[predId] = (d.dependency_type || 'fs').toUpperCase();
+        });
 
-        if (!t.is_project) {
-            // Fetch predecessor dependency records to extract types and lags
-            const deps = await this.orm.searchRead("project.task.dependency", [["task_id", "=", t.id]], ["depends_on_id", "dependency_type", "lag"]);
-            deps.forEach(d => {
-                const predId = Array.isArray(d.depends_on_id) ? d.depends_on_id[0] : d.depends_on_id;
-                depTypes[predId] = (d.dependency_type || 'fs').toUpperCase();
-            });
-
-            // Fetch successor dependency records to extract types and lags
-            const succDeps = await this.orm.searchRead("project.task.dependency", [["depends_on_id", "=", t.id]], ["task_id", "dependency_type", "lag"]);
-            succDeps.forEach(d => {
-                const succId = Array.isArray(d.task_id) ? d.task_id[0] : d.task_id;
-                succDepTypes[succId] = (d.dependency_type || 'fs').toUpperCase();
-            });
-        }
+        // Fetch successor dependency records to extract types and lags
+        const succDeps = await this.orm.searchRead("project.task.dependency", [["depends_on_id", "=", t.id]], ["task_id", "dependency_type", "lag"]);
+        const succDepTypes = {};
+        succDeps.forEach(d => {
+            const succId = Array.isArray(d.task_id) ? d.task_id[0] : d.task_id;
+            succDepTypes[succId] = (d.dependency_type || 'fs').toUpperCase();
+        });
 
         this.state.editorTask = {
             ...t,
-            planned_date_begin: t.planned_date_begin ? t.planned_date_begin.replace(' ', 'T').substring(0, 16) : null,
-            date_deadline: t.date_deadline ? t.date_deadline.replace(' ', 'T').substring(0, 16) : null,
+            planned_date_begin: t.planned_date_begin.replace(' ', 'T').substring(0, 16),
+            date_deadline: t.date_deadline.replace(' ', 'T').substring(0, 16),
             constraint_date: t.constraint_date ? t.constraint_date.replace(' ', 'T').substring(0, 16) : null,
             calendar_id: t.calendar_id ? (Array.isArray(t.calendar_id) ? t.calendar_id[0] : t.calendar_id) : false,
             _preds: [...(t.depend_on_ids || [])],
@@ -2665,41 +2554,16 @@ export class UltimateGanttRenderer extends Component {
             vals.user_ids = [[6, 0, et._resources]];
         }
 
-        let writeVals = { ...vals };
-        let resModel = "project.task";
-        let resId = parseInt(et.id);
-
-        if (et.is_project) {
-            resModel = "project.project";
-            resId = parseInt(et.r_id);
-            writeVals.date_start = writeVals.planned_date_begin;
-            writeVals.date = writeVals.date_deadline;
-            delete writeVals.planned_date_begin;
-            delete writeVals.date_deadline;
-            delete writeVals.depend_on_ids;
-            delete writeVals.inactive_dependency_ids;
-            delete writeVals.user_ids;
-            delete writeVals.is_milestone;
-            delete writeVals.effort;
-            delete writeVals.manually_scheduled;
-            delete writeVals.rollup;
-            delete writeVals.inactive;
-            delete writeVals.ignore_resource_calendar;
-            delete writeVals.effort_driven;
-            delete writeVals.project_border;
-        }
-
         this.pushHistory('update', { id: et.id, ...original }, { id: et.id, ...vals });
-        await this.orm.write(resModel, [resId], writeVals);
+        await this.orm.write("project.task", [et.id], vals);
 
-        // Handle successor updates (only for tasks):
-        if (!et.is_project) {
-            const originalSuccIds = this.getTaskSuccessors(et.id).map(s => s.id);
-            const currentSuccIds = et._succs || [];
+        // Handle successor updates:
+        const originalSuccIds = this.getTaskSuccessors(et.id).map(s => s.id);
+        const currentSuccIds = et._succs || [];
 
-            // 1. Remove depend_on_ids from removed successors
-            const removedSuccs = originalSuccIds.filter(id => !currentSuccIds.includes(id));
-            for (let sId of removedSuccs) {
+        // 1. Remove depend_on_ids from removed successors
+        const removedSuccs = originalSuccIds.filter(id => !currentSuccIds.includes(id));
+        for (let sId of removedSuccs) {
             const taskObj = this.props.model.data.flatMap(p => p.tasks || []).find(t => t && t.id === sId);
             if (taskObj) {
                 let preds = (taskObj.depend_on_ids || []).filter(id => id !== et.id);
@@ -2718,7 +2582,7 @@ export class UltimateGanttRenderer extends Component {
             if (taskObj) {
                 let preds = [...(taskObj.depend_on_ids || [])];
                 if (!preds.includes(et.id)) preds.push(et.id);
-
+                
                 let inactivePreds = [...(taskObj.inactive_dependency_ids || [])];
                 const isInactive = (et._inactive_succs || []).includes(sId);
                 if (isInactive && !inactivePreds.includes(et.id)) {
@@ -2820,7 +2684,6 @@ export class UltimateGanttRenderer extends Component {
         } catch (err) {
             console.error("Error saving successor dependency types:", err);
         }
-        } // Close if (!et.is_project)
 
         await this.props.model.load(this.props.model.params);
         await this.onAutoSchedule();
@@ -2856,9 +2719,9 @@ export class UltimateGanttRenderer extends Component {
     onContextMenu(ev, t) {
         let x = ev.clientX;
         let y = ev.clientY;
-
+        
         if (x + 180 > window.innerWidth) x = window.innerWidth - 180;
-
+        
         // Context menu is very tall (~520px). If it extends past the visible window, force it up!
         if (y + 520 > window.innerHeight) {
             y = window.innerHeight - 530;
@@ -2889,7 +2752,7 @@ export class UltimateGanttRenderer extends Component {
             this.state.contextMenu = null;
         }
     }
-
+    
     ctxFilter(op) {
         if (op === 'Clear') {
             this.state.customFilter = null;
@@ -2964,16 +2827,16 @@ export class UltimateGanttRenderer extends Component {
             const parentTask = allTasks.find(x => x.id === parentId);
             if (parentTask) {
                 const grandParentId = parentTask.parent_id ? parentTask.parent_id[0] : false;
-
+                
                 // Get siblings of t
                 const siblings = allTasks.filter(x => (x.parent_id ? x.parent_id[0] : false) === parentId).sort((a, b) => a.sequence - b.sequence);
                 const tIdx = siblings.findIndex(x => x.id === t.id);
-
+                
                 // Tasks below t in the same parent become children of t
                 const siblingsBelow = siblings.slice(tIdx + 1);
-
+                
                 const original = { id: t.id, parent_id: parentId, sequence: t.sequence };
-
+                
                 // Re-sequence grandparent children to make room
                 const gpChildren = allTasks.filter(x => (x.parent_id ? x.parent_id[0] : false) === grandParentId).sort((a, b) => a.sequence - b.sequence);
                 let targetSeq = (parentTask.sequence || 0) + 1;
@@ -2984,10 +2847,10 @@ export class UltimateGanttRenderer extends Component {
                     await Promise.all(toShift.map(x => this.orm.write("project.task", [x.id], { sequence: x.sequence + 10 })));
                 }
                 const newVals = { parent_id: grandParentId, sequence: targetSeq };
-
+                
                 this.pushHistory('update', original, { id: t.id, ...newVals });
                 await this.orm.write("project.task", [t.id], newVals);
-
+                
                 // Update children
                 if (siblingsBelow.length > 0) {
                     const childIds = siblingsBelow.map(x => x.id);
@@ -3369,25 +3232,6 @@ export class UltimateGanttRenderer extends Component {
     onPLeave() {
         this.state.hId = null;
         this.state.hoverTask = null;
-        this.state.hoverBaseline = null;
-        this.state.hoverRollupTask = null;
-    }
-    onBEnter(ev, t, bIdx) {
-        ev.stopPropagation();
-        this.state.hoverTask = t;
-        this.state.hoverBaseline = bIdx;
-    }
-    onBLeave(ev) {
-        ev.stopPropagation();
-        this.state.hoverBaseline = null;
-    }
-    onREnter(ev, t) {
-        ev.stopPropagation();
-        this.state.hoverRollupTask = t;
-    }
-    onRLeave(ev) {
-        ev.stopPropagation();
-        this.state.hoverRollupTask = null;
     }
     onMM(ev) {
         this.state.mouseX = ev.clientX + 15;
@@ -3425,54 +3269,7 @@ export class UltimateGanttRenderer extends Component {
             } else { this.state.depDrag.targetId = null; this.state.depDrag.targetName = null; this.state.depDrag.valid = false; }
         }
     }
-    
-    async onConflictApply() {
-        if (!this.state.conflictModal) return;
-        const cm = this.state.conflictModal;
-        if (cm.choice === 'cancel') {
-            this.state.conflictModal = null;
-            this.state.drag = null; this.state.dragOffset = 0; this.state.dragChainIds = [];
-            return;
-        }
-        console.log("[Project Border] Applying Conflict choice:", cm.choice);
-        cm.t.project_border = cm.choice;
-        await this.orm.write("project.task", [cm.t.id], { project_border: cm.choice });
-        let dx = cm.dx;
-        if (cm.choice === 'honor') {
-            dx = cm.pStart.diff(cm.os, 'days').days;
-            if (SCALES[this.state.zI].unit === 'day') dx = Math.round(dx);
-            console.log("[Project Border] Honoring border. New dx:", dx);
-        }
-        this.state.conflictModal = null;
-        this._finishDrag(cm.t, cm.os, cm.OE, cm.chain, dx);
-    }
-
-    _finishDrag(t, os, OE, chain, dx) {
-        // OPTIMISTIC LOCAL UPDATE: Prevent snap-back instantly
-        const newBegin = serializeDateTime(os.plus({ days: dx }));
-        const newEnd = serializeDateTime(OE.plus({ days: dx }));
-        t.planned_date_begin = newBegin; t.date_deadline = newEnd;
-        const vals_list = [{ id: t.id, planned_date_begin: newBegin, date_deadline: newEnd }];
-
-        chain.forEach(item => {
-            const cBegin = serializeDateTime(item.os.plus({ days: dx }));
-            const cEnd = serializeDateTime(item.OE.plus({ days: dx }));
-            item.t.planned_date_begin = cBegin; item.t.date_deadline = cEnd;
-            vals_list.push({ id: item.t.id, planned_date_begin: cBegin, date_deadline: cEnd });
-        });
-
-        // CLEAR DRAG STATE IMMEDIATELY (Visuals are already in sync via model update)
-        this.state.drag = null; this.state.dragOffset = 0; this.state.dragChainIds = [];
-
-        try {
-            this.orm.call("project.task", "action_batch_update_gantt_dates", [vals_list]).then(() => {
-                this.props.model.load(this.props.model.params);
-            }).catch(e => console.warn("Background sync delay", e));
-        } catch (err) {
-            console.error("Batch update failed", err);
-        }
-    }
-async onMU() {
+    async onMU() {
         if (this._winMM) { window.removeEventListener('mousemove', this._winMM); this._winMM = null; }
         if (this._winMU) { window.removeEventListener('mouseup', this._winMU); this._winMU = null; }
 
@@ -3482,31 +3279,31 @@ async onMU() {
             let dx = this.state.dragOffset;
             if (SCALES[this.state.zI].unit === 'day') dx = Math.round(dx);
 
-            // Check project border
-            if (t.project_id && t.project_id.length > 0) {
-                const p = this.props.model.data.find(proj => proj.r_id === t.project_id[0]);
-                console.log("[Project Border Debug] Found Project p:", p, "p.planned_date_begin:", p?.planned_date_begin, "p.date_start:", p?.date_start);
-                let pStart = p && p.planned_date_begin ? deserializeDateTime(p.planned_date_begin) : (p && p.date_start ? deserializeDateTime(p.date_start) : null);
-                let nStartDT = os.plus({ days: dx });
-                console.log("[Project Border] task manually_scheduled?", t.manually_scheduled, "pStart", pStart?.toISODate(), "nStartDT", nStartDT.toISODate(), "borderOption", t.project_border);
-                if (pStart && !t.manually_scheduled && nStartDT < pStart) {
-                    let borderOption = t.project_border || 'ask';
-                    console.log("[Project Border] Violation detected. Option:", borderOption);
-                    if (borderOption === 'honor') {
-                        dx = pStart.diff(os, 'days').days;
-                        console.log("[Project Border] Honoring border. New dx:", dx);
-                    } else if (borderOption === 'ask') {
-                        this.state.conflictModal = {
-                            t, os, OE, chain, dx, pStart,
-                            newStartFmt: nStartDT.toLocaleString(DateTime.DATETIME_SHORT),
-                            pStartFmt: pStart.toLocaleString(DateTime.DATETIME_SHORT),
-                            choice: 'ignore'
-                        };
-                        return; // Wait for modal
-                    }
-                }
+            // OPTIMISTIC LOCAL UPDATE: Prevent snap-back instantly
+            const newBegin = serializeDateTime(os.plus({ days: dx }));
+            const newEnd = serializeDateTime(OE.plus({ days: dx }));
+            t.planned_date_begin = newBegin; t.date_deadline = newEnd;
+            const vals_list = [{ id: t.id, planned_date_begin: newBegin, date_deadline: newEnd }];
+
+            chain.forEach(item => {
+                const cBegin = serializeDateTime(item.os.plus({ days: dx }));
+                const cEnd = serializeDateTime(item.OE.plus({ days: dx }));
+                item.t.planned_date_begin = cBegin; item.t.date_deadline = cEnd;
+                vals_list.push({ id: item.t.id, planned_date_begin: cBegin, date_deadline: cEnd });
+            });
+
+            // CLEAR DRAG STATE IMMEDIATELY (Visuals are already in sync via model update)
+            this.state.drag = null; this.state.dragOffset = 0; this.state.dragChainIds = [];
+
+            try {
+                // Background Sync: No 'await' on UI-blocking path if possible, but Odoo ORM needs to finish.
+                // We wrap it to handle the potential 3s timeout gracefully.
+                this.orm.call("project.task", "action_batch_update_gantt_dates", [vals_list]).then(() => {
+                    this.props.model.load(this.props.model.params);
+                }).catch(e => console.warn("Background sync delay", e));
+            } catch (err) {
+                console.error("Batch update failed", err);
             }
-            this._finishDrag(t, os, OE, chain, dx);
         }
         else if (this.state.depDrag) {
             if (this.state.depDrag.valid && this.state.depDrag.targetId) {

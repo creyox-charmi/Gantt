@@ -37,6 +37,10 @@
                                 <field name="baseline_end_date"/>
                                 <field name="baseline_duration"/>
                                 <field name="baseline_effort"/>
+                                <field name="baseline2_start_date"/>
+                                <field name="baseline2_end_date"/>
+                                <field name="baseline3_start_date"/>
+                                <field name="baseline3_end_date"/>
                                 <button name="action_set_baseline" type="object" string="Set Current as Baseline" class="btn-secondary"/>
                             </group>
                             <group string="Progress Metrics">
