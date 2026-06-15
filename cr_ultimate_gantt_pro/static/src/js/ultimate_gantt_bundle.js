@@ -33,7 +33,7 @@ export class UltimateGanttModel extends Model {
     }
     async load(params) {
         this.params = params;
-        const res = await this.orm.searchRead(params.resModel, params.domain || [], ["name", "date_start", "date", "ultimate_duration", "baseline_start_date", "baseline_end_date", "cost", "complexity"]);
+        const res = await this.orm.searchRead(params.resModel, params.domain || [], ["name", "date_start", "date", "ultimate_duration", "baseline_start_date", "baseline_end_date", "cost", "complexity", "inactive"]);
         const pIds = res.map(p => p.id);
         let tasks = [];
         if (pIds.length > 0) tasks = await this.orm.searchRead("project.task", [["project_id", "in", pIds]], ["name", "project_id", "planned_date_begin", "date_deadline", "actual_progress", "gantt_color", "depend_on_ids", "inactive_dependency_ids", "parent_id", "user_ids", "sequence", "stage_id", "baseline_start_date", "baseline_end_date", "baseline2_start_date", "baseline2_end_date", "baseline3_start_date", "baseline3_end_date", "baseline_duration", "effort", "scheduling_mode", "constraint_type", "constraint_date", "manually_scheduled", "rollup", "inactive", "calendar_id", "ignore_resource_calendar", "effort_driven", "project_border", "description", "cost", "complexity", "is_milestone"], { order: "sequence ASC" });
@@ -89,19 +89,23 @@ export class UltimateGanttModel extends Model {
             const sortBySeq = nodes => nodes.sort((a, b) => (a.sequence || 0) - (b.sequence || 0) || a.id - b.id);
             sortBySeq(tree);
             Object.values(treeMap).forEach(node => { if (node.children.length > 1) sortBySeq(node.children); });
-            let flat = []; let trav = (nodes, d, pb) => nodes.forEach((n, i) => {
+            let flat = []; let trav = (nodes, d, pb, parentInactive) => nodes.forEach((n, i) => {
+                if (parentInactive) n.inactive = true;
                 let wbs = pb + '.' + (i + 1); n.depth = d; n.computed_wbs = wbs; flat.push(n);
                 if (n.children && n.children.length > 0) {
-                    trav(n.children, d + 1, wbs);
+                    trav(n.children, d + 1, wbs, n.inactive);
                     // Rollup parent dates
-                    const cStarts = n.children.map(c => deserializeDateTime(c.planned_date_begin).ts);
-                    const cEnds = n.children.map(c => deserializeDateTime(c.date_deadline).ts);
-                    n.planned_date_begin = serializeDateTime(DateTime.fromMillis(Math.min(...cStarts)));
-                    n.date_deadline = serializeDateTime(DateTime.fromMillis(Math.max(...cEnds)));
-                    n.is_milestone = (n.planned_date_begin === n.date_deadline);
+                    const activeChildren = n.children.filter(c => !c.inactive);
+                    if (activeChildren.length > 0) {
+                        const cStarts = activeChildren.map(c => deserializeDateTime(c.planned_date_begin).ts);
+                        const cEnds = activeChildren.map(c => deserializeDateTime(c.date_deadline).ts);
+                        n.planned_date_begin = serializeDateTime(DateTime.fromMillis(Math.min(...cStarts)));
+                        n.date_deadline = serializeDateTime(DateTime.fromMillis(Math.max(...cEnds)));
+                        n.is_milestone = (n.planned_date_begin === n.date_deadline);
+                    }
                 }
             });
-            trav(tree, 0, (idx + 1).toString());
+            trav(tree, 0, (idx + 1).toString(), !!p.inactive);
 
             // Compute Relationships
             flat.forEach(t => {
@@ -114,13 +118,18 @@ export class UltimateGanttModel extends Model {
             let pCost = p.cost || 0;
             let pComplex = p.complexity || 'normal';
             if (flat.length > 0) {
-                const fStarts = flat.map(t => deserializeDateTime(t.planned_date_begin).ts);
-                const fEnds = flat.map(t => deserializeDateTime(t.date_deadline).ts);
-                pStart = serializeDateTime(DateTime.fromMillis(Math.min(...fStarts)));
-                pEnd = serializeDateTime(DateTime.fromMillis(Math.max(...fEnds)));
-                pCost = flat.reduce((acc, t) => acc + (t.cost || 0), 0);
+                const activeTasks = flat.filter(t => !t.inactive);
+                if (activeTasks.length > 0) {
+                    const fStarts = activeTasks.map(t => deserializeDateTime(t.planned_date_begin).ts);
+                    const fEnds = activeTasks.map(t => deserializeDateTime(t.date_deadline).ts);
+                    pStart = serializeDateTime(DateTime.fromMillis(Math.min(...fStarts)));
+                    pEnd = serializeDateTime(DateTime.fromMillis(Math.max(...fEnds)));
+                    pCost = activeTasks.reduce((acc, t) => acc + (t.cost || 0), 0);
+                } else {
+                    pCost = 0;
+                }
             }
-            return { ...p, id: `proj_${p.id}`, r_id: p.id, computed_wbs: (idx + 1).toString(), tasks: flat, planned_date_begin: pStart, date_deadline: pEnd, real_duration: p.ultimate_duration || "-", cost: pCost, complexity: pComplex };
+            return { ...p, is_project: true, id: `proj_${p.id}`, r_id: p.id, computed_wbs: (idx + 1).toString(), tasks: flat, planned_date_begin: pStart, date_deadline: pEnd, real_duration: p.ultimate_duration || "-", cost: pCost, complexity: pComplex };
         });
         this._computeCP();
         this.allTasksList = this.data.flatMap(p => p.tasks || []).map(t => ({ id: t.id, name: t.name, computed_wbs: t.computed_wbs }));
@@ -731,8 +740,8 @@ export class UltimateGanttRenderer extends Component {
                             </div>
                         <div class="o_ug_sidebar_sync shadow-none" t-ref="sidebarSync" style="width: max-content; min-width: 100%;">
                         <t t-foreach="this.visibleProjects" t-as="p" t-key="p.id">
-                                 <div class="o_ug_row o_ug_project_row" t-att-style="'height: '+state.config.gantt_row_height+'px; width: max-content; min-width: 100%;'" t-on-mouseenter="() => this.onPEnter(p)" t-on-mouseleave="this.onPLeave" t-att-class="{ 'o_ug_row_hover': state.hId === p.id }">
-                                     <div t-if="state.config.gantt_show_wbs" class="o_ug_sidebar_col fw-bold text-dark" t-attf-style="width: {{state.colWidths.wbs}}px; justify-content: center;"><t t-esc="p.computed_wbs"/></div>
+                                 <div class="o_ug_row o_ug_project_row" t-att-style="'height: '+state.config.gantt_row_height+'px; width: max-content; min-width: 100%;'" t-on-mouseenter="() => this.onPEnter(p)" t-on-mouseleave="this.onPLeave" t-att-class="{ 'o_ug_row_hover': state.hId === p.id, 'text-decoration-line-through text-muted opacity-50': p.inactive }">
+                                     <div t-if="state.config.gantt_show_wbs" t-attf-class="o_ug_sidebar_col fw-bold {{ p.inactive ? 'text-muted' : 'text-dark' }}" t-attf-style="width: {{state.colWidths.wbs}}px; justify-content: center;"><t t-esc="p.computed_wbs"/></div>
                                      <div class="o_ug_sidebar_col flex-shrink-0" t-attf-style="width: {{state.colWidths.name}}px; padding-left: 24px;">
                                          <i t-attf-class="fa {{ state.coll['proj_'+p.r_id] ? 'fa-folder text-warning' : 'fa-folder-open text-primary' }} me-2" style="font-size:16px; cursor: pointer;" t-on-click.stop="() => this.toggleColl('proj_'+p.r_id)"/>
                                          <span class="text-uppercase text-truncate"><t t-esc="p.name"/></span>
@@ -1203,7 +1212,7 @@ export class UltimateGanttRenderer extends Component {
                                         <div class="ug_task_baseline" t-att-style="bs + ' height: 3px;'"/>
                                     </div>
                                 </t>
-                                <div t-if="ps" class="o_gantt_pill_wrapper o_ug_project_summary" t-att-style="ps" t-on-dblclick="() => this.openProjectEditor(p)">
+                                <div t-if="ps" class="o_gantt_pill_wrapper o_ug_project_summary" t-att-style="ps + (p.inactive ? ' opacity: 0.5; filter: grayscale(100%);' : '')" t-on-dblclick="() => this.openProjectEditor(p)">
                                 </div>
                                 <span class="ps-2 text-muted" style="font-size:10px; z-index:11; font-weight:bold;"><t t-esc="p.name"/></span>
                             </div>
@@ -2683,7 +2692,6 @@ export class UltimateGanttRenderer extends Component {
             delete writeVals.effort;
             delete writeVals.manually_scheduled;
             delete writeVals.rollup;
-            delete writeVals.inactive;
             delete writeVals.ignore_resource_calendar;
             delete writeVals.effort_driven;
             delete writeVals.project_border;
@@ -3259,7 +3267,7 @@ export class UltimateGanttRenderer extends Component {
         let depType = this.state.config.gantt_dependency_type || 'FS';
         let tasks = (this.props.model.data || []).flatMap(p => p.tasks);
 
-        let preds = tasks.filter(x => (t.depend_on_ids || []).includes(x.id) && !(t.inactive_dependency_ids || []).includes(x.id));
+        let preds = tasks.filter(x => !x.inactive && (t.depend_on_ids || []).includes(x.id) && !(t.inactive_dependency_ids || []).includes(x.id));
 
         if (t.manually_scheduled) {
             console.log(`[DRAG] onBMD | Task: ${t.id} is manually_scheduled. Ignoring predecessor constraints!`);
@@ -3303,7 +3311,7 @@ export class UltimateGanttRenderer extends Component {
     }
     _getSuccessorChain(taskId) {
         let chain = new Set(); let stack = [String(taskId)];
-        let tasks = (this.props.model.data || []).flatMap(p => p.tasks);
+        let tasks = (this.props.model.data || []).flatMap(p => p.tasks).filter(t => !t.inactive);
         while (stack.length) {
             let curId = stack.pop();
             tasks.filter(t => (t.depend_on_ids || []).some(id => String(id) === curId && !(t.inactive_dependency_ids || []).includes(Number(id)))).forEach(s => {
@@ -3315,7 +3323,7 @@ export class UltimateGanttRenderer extends Component {
     }
     async onAutoSchedule() {
         const data = this.props.model.data; if (!data || !data.length) return;
-        const allTasks = data.flatMap(p => p.tasks);
+        const allTasks = data.flatMap(p => p.tasks).filter(t => !t.inactive);
         const taskMap = {}; allTasks.forEach(t => taskMap[t.id] = {
             ...t,
             s: deserializeDateTime(t.planned_date_begin),

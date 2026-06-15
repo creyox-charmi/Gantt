@@ -138,6 +138,15 @@ class ProjectTask(models.Model):
                 'baseline_end_date': task.date_deadline,
             })
 
+    def write(self, vals):
+        res = super(ProjectTask, self).write(vals)
+        if 'inactive' in vals:
+            for task in self:
+                children = self.env['project.task'].search([('parent_id', '=', task.id)])
+                if children:
+                    children.write({'inactive': vals['inactive']})
+        return res
+
     @api.model
     def action_batch_update_gantt_dates(self, vals_list):
         """
