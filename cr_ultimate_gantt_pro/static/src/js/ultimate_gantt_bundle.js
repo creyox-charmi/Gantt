@@ -1195,14 +1195,7 @@ export class UltimateGanttRenderer extends Component {
                         <t t-foreach="this.visibleProjects" t-as="p" t-key="'tl_p_'+p.id">
                             <div class="o_ug_row o_ug_project_row" t-att-data-id="'proj_'+p.r_id" t-att-style="'height: '+state.config.gantt_row_height+'px; width: '+this.totalGridWidth+'px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; position: relative;'" t-on-mouseenter="() => this.onPEnter(p)" t-on-mouseleave="this.onPLeave" t-att-class="{ 'o_ug_row_hover': state.hId === p.id }">
                                 <t t-set="ps" t-value="this.getStyle(p)"/>
-                                <t t-if="state.config.gantt_show_rollup">
-                                    <t t-set="rws" t-value="this.getRollupWrapStyle(p)"/>
-                                    <div t-if="rws" class="ug_rollup_wrap" t-att-style="rws">
-                                        <t t-foreach="p.tasks || []" t-as="rt" t-key="'r_'+rt.id">
-                                            <div t-if="rt.planned_date_begin || rt.date_start" class="ug_rollup_bar" t-att-style="this.getRollupStyle(rt)" t-on-mouseenter="(ev)=>this.onREnter(ev, rt)" t-on-mouseleave="(ev)=>this.onRLeave(ev)"/>
-                                        </t>
-                                    </div>
-                                </t>
+
                                 <t t-if="state.config.gantt_show_baselines">
                                     <t t-set="bws" t-value="this.getBaselineWrapStyle(p)"/>
                                     <t t-set="bs" t-value="this.getBaselineStyle(p)"/>
@@ -1214,12 +1207,38 @@ export class UltimateGanttRenderer extends Component {
                                 </t>
                                 <div t-if="ps" class="o_gantt_pill_wrapper o_ug_project_summary" t-att-style="ps + (p.inactive ? ' opacity: 0.5; filter: grayscale(100%);' : '')" t-on-dblclick="() => this.openProjectEditor(p)">
                                 </div>
+                                <t t-if="state.config.gantt_show_rollup">
+                                    <t t-foreach="p.tasks ? p.tasks.filter(tk => tk.rollup and (!tk.parent_id or tk.parent_id[0] === false)) : []" t-as="ru" t-key="'ru_p_'+ru.id">
+                                        <t t-set="rus" t-value="this.getStyle(ru)"/>
+                                        <t t-if="rus">
+                                            <t t-if="!ru.is_milestone">
+                                                <div class="o_ug_rollup_task" t-att-style="rus + ' top: calc(50% + ' + (state.config.gantt_show_baselines ? '12' : '6') + 'px); height: 6px; border-radius: 2px; position: absolute; z-index: 15; background-color: ' + (ru.gantt_color || '#22c55e') + '; opacity: 0.8; pointer-events: auto; cursor: pointer;'" t-on-mouseenter.stop="(ev)=>this.onREnter(ev, ru)" t-on-mouseleave.stop="(ev)=>this.onRLeave(ev)"/>
+                                            </t>
+                                            <t t-if="ru.is_milestone">
+                                                <div class="o_ug_rollup_milestone" t-att-style="rus + ' top: calc(50% + ' + (state.config.gantt_show_baselines ? '10' : '4') + 'px); width: 10px !important; height: 10px; transform: rotate(45deg); position: absolute; z-index: 15; background-color: ' + (ru.gantt_color || '#d9534f') + '; opacity: 0.8; margin-left: -5px; pointer-events: auto; cursor: pointer;'" t-on-mouseenter.stop="(ev)=>this.onREnter(ev, ru)" t-on-mouseleave.stop="(ev)=>this.onRLeave(ev)"/>
+                                            </t>
+                                        </t>
+                                    </t>
+                                </t>
                                 <span class="ps-2 text-muted" style="font-size:10px; z-index:11; font-weight:bold;"><t t-esc="p.name"/></span>
                             </div>
                             <t t-foreach="p.visibleTasks" t-as="t" t-key="'tl_t_'+t.id">
                                 <div class="o_ug_row" t-att-data-id="t.id" t-att-style="'height: '+state.config.gantt_row_height+'px; width: '+this.totalGridWidth+'px; position: relative;'" t-on-mouseenter="() => this.onPEnter(t)" t-on-mouseleave="this.onPLeave" t-att-class="{ 'o_ug_row_hover': state.hId === t.id }" t-on-contextmenu.prevent="(ev) => this.onContextMenu(ev, t)">
                                     <t t-set="ts" t-value="this.getStyle(t)"/>
 
+                                     <t t-if="state.config.gantt_show_rollup">
+                                         <t t-foreach="t.children ? t.children.filter(c => c.rollup) : []" t-as="ru" t-key="'ru_t_'+ru.id">
+                                             <t t-set="rus" t-value="this.getStyle(ru)"/>
+                                             <t t-if="rus">
+                                                 <t t-if="!ru.is_milestone">
+                                                     <div class="o_ug_rollup_task" t-att-style="rus + ' top: calc(50% + ' + (state.config.gantt_show_baselines ? '12' : '6') + 'px); height: 6px; border-radius: 2px; position: absolute; z-index: 15; background-color: ' + (ru.gantt_color || '#22c55e') + '; opacity: 0.8; pointer-events: auto; cursor: pointer;'" t-on-mouseenter.stop="(ev)=>this.onREnter(ev, ru)" t-on-mouseleave.stop="(ev)=>this.onRLeave(ev)"/>
+                                                 </t>
+                                                 <t t-if="ru.is_milestone">
+                                                     <div class="o_ug_rollup_milestone" t-att-style="rus + ' top: calc(50% + ' + (state.config.gantt_show_baselines ? '10' : '4') + 'px); width: 10px !important; height: 10px; transform: rotate(45deg); position: absolute; z-index: 15; background-color: ' + (ru.gantt_color || '#d9534f') + '; opacity: 0.8; margin-left: -5px; pointer-events: auto; cursor: pointer;'" t-on-mouseenter.stop="(ev)=>this.onREnter(ev, ru)" t-on-mouseleave.stop="(ev)=>this.onRLeave(ev)"/>
+                                                 </t>
+                                             </t>
+                                         </t>
+                                     </t>
                                      <div t-if="ts" t-attf-class="o_gantt_pill_wrapper o_draggable {{ t.children &amp;&amp; t.children.length > 0 &amp;&amp; !t.is_milestone ? 'o_ug_summary' : '' }} {{ t.children &amp;&amp; t.children.length > 0 &amp;&amp; !t.is_milestone &amp;&amp; t.isCritical &amp;&amp; state.config.gantt_show_critical_path ? 'o_ug_summary_critical' : '' }}" t-att-style="ts + ' overflow: visible !important;'" t-on-mousedown="(ev)=>this.onBMD(ev,t)" t-on-dblclick="() => this.openTaskEditor(t)">
 <t t-if="(!t.children || t.children.length === 0) and !t.is_milestone">
                                             <div t-attf-class="o_gantt_pill {{ t.gantt_color ? 'o_ug_custom_color' : '' }} {{ t.isCritical and state.config.gantt_show_critical_path ? 'o_gantt_pill_critical ripple-danger' : 'o_gantt_pill_tan' }} w-100 h-100 d-flex align-items-center" t-att-style="(t.gantt_color &amp;&amp; !(t.isCritical &amp;&amp; state.config.gantt_show_critical_path) ? '--pill-color:' + t.gantt_color + ' !important; background-color:' + t.gantt_color + ' !important; color: #1e293b !important;' : '') + 'height: '+(state.config.gantt_show_baselines ? 13 : (state.config.gantt_row_height - 2*state.config.gantt_bar_margin))+'px !important; margin-top: 0px !important; border-radius: 4px;' + (t.inactive ? ' opacity: 0.5; filter: grayscale(100%);' : '')">
@@ -1789,21 +1808,23 @@ export class UltimateGanttRenderer extends Component {
              </div>
 
              <!-- TOOLTIP -->
-             <div t-if="state.hoverTask or state.hoverRollupTask" class="o_ug_tooltip" t-att-style="'left: '+state.mouseX+'px; top: '+state.mouseY+'px;'">
-                <t t-if="state.hoverRollupTask">
-                    <div class="o_ug_tooltip_header"><t t-esc="state.hoverRollupTask.name"/> (Rollup)</div>
-                    <div class="o_ug_tooltip_row">
-                        <span class="o_ug_tooltip_label">Start:</span>
-                        <span class="o_ug_tooltip_val"><t t-esc="state.hoverRollupTask.planned_date_begin ? state.hoverRollupTask.planned_date_begin.split(' ')[0] : ''"/></span>
-                    </div>
-                    <div class="o_ug_tooltip_row">
-                        <span class="o_ug_tooltip_label">End:</span>
-                        <span class="o_ug_tooltip_val"><t t-esc="state.hoverRollupTask.date_deadline ? state.hoverRollupTask.date_deadline.split(' ')[0] : ''"/></span>
-                    </div>
-                    <div class="o_ug_tooltip_row">
-                        <span class="o_ug_tooltip_label">Duration:</span>
-                        <span class="o_ug_tooltip_val"><t t-esc="state.hoverRollupTask.real_duration"/></span>
-                    </div>
+             <div t-if="state.hoverTask or (state.hoverRollupTasks and state.hoverRollupTasks.length > 0)" class="o_ug_tooltip" t-att-style="'left: '+state.mouseX+'px; top: '+state.mouseY+'px;'">
+                <t t-if="state.hoverRollupTasks and state.hoverRollupTasks.length > 0">
+                    <t t-foreach="state.hoverRollupTasks" t-as="ruTask" t-key="'tt_ru_'+ruTask.id">
+                        <div class="o_ug_tooltip_header mt-1"><t t-esc="ruTask.name"/> (Rollup)</div>
+                        <div class="o_ug_tooltip_row">
+                            <span class="o_ug_tooltip_label">Start:</span>
+                            <span class="o_ug_tooltip_val"><t t-esc="ruTask.planned_date_begin ? ruTask.planned_date_begin.split(' ')[0] : ''"/></span>
+                        </div>
+                        <div class="o_ug_tooltip_row">
+                            <span class="o_ug_tooltip_label">End:</span>
+                            <span class="o_ug_tooltip_val"><t t-esc="ruTask.date_deadline ? ruTask.date_deadline.split(' ')[0] : ''"/></span>
+                        </div>
+                        <div class="o_ug_tooltip_row mb-1">
+                            <span class="o_ug_tooltip_label">Complete:</span>
+                            <span class="o_ug_tooltip_val"><t t-esc="Math.round(ruTask.actual_progress || 0)"/>%</span>
+                        </div>
+                    </t>
                 </t>
                 <t t-elif="state.hoverBaseline">
                     <div class="o_ug_tooltip_header"><t t-esc="state.hoverTask.name"/> (baseline <t t-esc="state.hoverBaseline"/>)</div>
@@ -1889,7 +1910,7 @@ export class UltimateGanttRenderer extends Component {
             coll: {}, hId: null, drag: null, depDrag: null, rangeOpen: false, settingsOpen: false, uiSettingsOpen: false, taskSearch: "",
             tS: now.startOf('day'), tE: now.endOf('day'), tempS: now.startOf('day').toISODate(), tempE: now.endOf('day').toISODate(),
             zI: 5, dragOffset: 0, dragChainIds: [], editorTask: null, conflictModal: null, versionsOpen: false, versions: [], showSaveVersion: false, newVersionName: "", activeVersionId: null,
-            history: [], redoStack: [], hoverTask: null, hoverBaseline: null, hoverRollupTask: null, mouseX: 0, mouseY: 0,
+            history: [], redoStack: [], hoverTask: null, hoverBaseline: null, hoverRollupTasks: [], mouseX: 0, mouseY: 0,
             sidebarWidth: parseInt(localStorage.getItem("ugp_sb_w") || "450"), timelineOnly: false, viewportWidth: 0,
             editingCell: null,
             colResize: null,
@@ -2329,24 +2350,6 @@ export class UltimateGanttRenderer extends Component {
         return `left:${l}px; width:${Math.max(w, 5)}px;`;
     }
 
-    getRollupWrapStyle(t) {
-        let rowH = this.state.config.gantt_row_height || 52;
-        let taskH = 13;
-        let taskTop = (rowH - taskH) / 2;
-        let topOffset = taskTop + taskH + 1; // 1px gap below centered task bar
-        return `position:absolute; width:100%; top:${topOffset}px; height: 4px; z-index:9; pointer-events:none;`;
-    }
-
-    getRollupStyle(t) {
-        let px = SCALES[this.state.zI].px; const dDiff = Math.abs(Math.round(this.state.tE.diff(this.state.tS, 'days').days));
-        if (this.state.zI === 2 || dDiff > 350) px = (this.totalGridWidth) / 365.25; else if (SCALES[this.state.zI].unit === 'day' && dDiff <= 7) px = 180;
-        let sStr = t.planned_date_begin || t.date_start; let eStr = t.date_deadline || t.date;
-        if (!sStr || !eStr) return null;
-        let s = deserializeDateTime(sStr), e = deserializeDateTime(eStr);
-        if (!s || !e) return null;
-        let l = (s.diff(this.state.tS).as('days')) * px, w = (e.diff(s).as('days')) * px;
-        return `left:${l}px; width:${Math.max(w, 5)}px; background: #60a5fa; position: absolute; top: 0px; height: 3px; border-radius: 1px; box-sizing: border-box; pointer-events: auto;`;
-    }
 
     getBaselineWrapStyle(t) {
         let sStr = t.baseline_start_date;
@@ -3394,11 +3397,25 @@ export class UltimateGanttRenderer extends Component {
     }
     onREnter(ev, t) {
         ev.stopPropagation();
-        this.state.hoverRollupTask = t;
+        let siblings = [];
+        const allTasks = this.props.model.data.flatMap(p => p.tasks);
+        if (t.parent_id && t.parent_id[0]) {
+            let parent = allTasks.find(p => p.id === t.parent_id[0]);
+            if (parent) {
+                siblings = parent.children.filter(c => c.rollup && c.planned_date_begin === t.planned_date_begin && c.date_deadline === t.date_deadline);
+            }
+        } else {
+            let proj = this.props.model.data.find(p => p.id === (t.project_id && t.project_id[0]));
+            if (proj) {
+                siblings = proj.tasks.filter(c => c.rollup && (!c.parent_id || c.parent_id[0] === false) && c.planned_date_begin === t.planned_date_begin && c.date_deadline === t.date_deadline);
+            }
+        }
+        if (!siblings.length) siblings = [t];
+        this.state.hoverRollupTasks = siblings;
     }
     onRLeave(ev) {
         ev.stopPropagation();
-        this.state.hoverRollupTask = null;
+        this.state.hoverRollupTasks = [];
     }
     onMM(ev) {
         this.state.mouseX = ev.clientX + 15;
