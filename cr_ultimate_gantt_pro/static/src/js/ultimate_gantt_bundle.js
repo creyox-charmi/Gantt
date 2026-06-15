@@ -3261,7 +3261,9 @@ export class UltimateGanttRenderer extends Component {
 
         let preds = tasks.filter(x => (t.depend_on_ids || []).includes(x.id) && !(t.inactive_dependency_ids || []).includes(x.id));
 
-        if (preds.length > 0) {
+        if (t.manually_scheduled) {
+            console.log(`[DRAG] onBMD | Task: ${t.id} is manually_scheduled. Ignoring predecessor constraints!`);
+        } else if (preds.length > 0) {
             let maxDiff = null;
             preds.forEach(p => {
                 let pStart = deserializeDateTime(p.planned_date_begin);
@@ -3280,6 +3282,7 @@ export class UltimateGanttRenderer extends Component {
             });
             if (maxDiff !== null) {
                 minDx = Math.min(0, maxDiff); // Prevent teleporting if already violating
+                console.log(`[DRAG] onBMD | Predecessor constraint applied. minDx:`, minDx);
             }
         }
 
@@ -3484,9 +3487,29 @@ async onMU() {
 
             // Check project border
             if (t.project_id && t.project_id.length > 0) {
-                const p = this.props.model.data.find(proj => proj.r_id === t.project_id[0]);
-                console.log("[Project Border Debug] Found Project p:", p, "p.planned_date_begin:", p?.planned_date_begin, "p.date_start:", p?.date_start);
-                let pStart = p && p.planned_date_begin ? deserializeDateTime(p.planned_date_begin) : (p && p.date_start ? deserializeDateTime(p.date_start) : null);
+                let p = this.props.model.data.find(proj => proj.r_id === t.project_id[0]);
+                let pStart = null;
+
+                if (p) {
+                    pStart = p.planned_date_begin ? deserializeDateTime(p.planned_date_begin) : (p.date_start ? deserializeDateTime(p.date_start) : null);
+                } else {
+                    // Fallback for when the view is opened from project.task and 'p' is not in the grid
+                    try {
+                        const projData = await this.orm.searchRead("project.project", [["id", "=", t.project_id[0]]], ["date_start"]);
+                        if (projData && projData.length > 0 && projData[0].date_start) {
+                            pStart = deserializeDateTime(projData[0].date_start);
+                        } else {
+                            const tData = await this.orm.searchRead("project.task", [["project_id", "=", t.project_id[0]]], ["planned_date_begin"]);
+                            if (tData.length > 0) {
+                                const minTs = Math.min(...tData.filter(x => x.planned_date_begin).map(x => deserializeDateTime(x.planned_date_begin).ts));
+                                if (minTs !== Infinity) pStart = DateTime.fromMillis(minTs);
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Failed to fetch project for border", e);
+                    }
+                }
+
                 let nStartDT = os.plus({ days: dx });
                 console.log("[Project Border] task manually_scheduled?", t.manually_scheduled, "pStart", pStart?.toISODate(), "nStartDT", nStartDT.toISODate(), "borderOption", t.project_border);
                 if (pStart && !t.manually_scheduled && nStartDT < pStart) {
