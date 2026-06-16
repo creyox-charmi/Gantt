@@ -840,66 +840,49 @@ export class UltimateGanttRenderer extends Component {
                                              <div class="o_ug_dropdown_backdrop" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1040; cursor: default;" t-on-click.stop.prevent="this.commitCellEdit"></div>
                                              <div class="o_ug_dep_dropdown d-flex flex-column bg-white shadow-sm border rounded" style="position: absolute; top: 100%; left: 0; min-width: 320px; z-index: 1050; padding: 0;">
                                                  <div class="d-flex border-bottom bg-light">
-                                                     <div t-attf-class="p-2 border-end fw-bold text-center {{ state.inlineResourceTab === 'work' || !state.inlineResourceTab ? 'text-dark' : 'text-muted' }}" style="font-size: 11px; cursor: pointer; flex: 1;" t-on-click="() => state.inlineResourceTab = 'work'"><i class="fa fa-users me-1"/>Work</div>
-                                                     <div t-attf-class="p-2 border-end text-center {{ state.inlineResourceTab === 'material' ? 'text-dark fw-bold' : 'text-muted' }}" style="font-size: 11px; cursor: pointer; flex: 1;" t-on-click="() => state.inlineResourceTab = 'material'"><i class="fa fa-cubes me-1"/>Material</div>
-                                                     <div t-attf-class="p-2 text-center {{ state.inlineResourceTab === 'cost' ? 'text-dark fw-bold' : 'text-muted' }}" style="font-size: 11px; cursor: pointer; flex: 1;" t-on-click="() => state.inlineResourceTab = 'cost'"><i class="fa fa-money me-1"/>Cost</div>
+                                                     <div class="p-2 border-end fw-bold text-dark text-center" style="font-size: 11px; cursor: pointer; flex: 1;"><i class="fa fa-users me-1"/>Work</div>
+                                                     <div class="p-2 border-end text-muted text-center" style="font-size: 11px; cursor: pointer; flex: 1;"><i class="fa fa-cubes me-1"/>Material</div>
+                                                     <div class="p-2 text-muted text-center" style="font-size: 11px; cursor: pointer; flex: 1;"><i class="fa fa-money me-1"/>Cost</div>
                                                  </div>
-                                                 <div t-if="state.inlineResourceTab === 'work' || !state.inlineResourceTab">
-                                                     <div class="d-flex align-items-center bg-light border-bottom p-1" style="font-size: 10px; font-weight: bold;">
-                                                         <div style="width: 24px; text-align: center;">-</div>
-                                                         <div style="flex: 1; padding-left: 4px;">Name</div>
-                                                         <div style="width: 60px; text-align: center;">Units</div>
-                                                         <div style="width: 60px; text-align: center;">Rate table</div>
-                                                     </div>
+                                                 <div class="d-flex align-items-center bg-light border-bottom p-1" style="font-size: 10px; font-weight: bold;">
+                                                     <div style="width: 24px; text-align: center;">-</div>
+                                                     <div style="flex: 1; padding-left: 4px;">Name</div>
+                                                     <div style="width: 60px; text-align: center;">Units</div>
+                                                     <div style="width: 60px; text-align: center;">Rate table</div>
                                                  </div>
-                                                 <div t-if="state.inlineResourceTab === 'material'" class="p-3 text-center text-muted" style="font-size: 11px;">
-                                                     <i class="fa fa-cubes mb-2 d-block" style="font-size: 24px; opacity: 0.5;"></i>
-                                                     No material resources found.
-                                                 </div>
-                                                 <div t-if="state.inlineResourceTab === 'cost'" class="p-3 text-center text-muted" style="font-size: 11px;">
-                                                     <i class="fa fa-money mb-2 d-block" style="font-size: 24px; opacity: 0.5;"></i>
-                                                     No cost resources found.
-                                                 </div>
-                                                 <t t-if="state.inlineResourceTab === 'work' || !state.inlineResourceTab">
-                                                     <div style="max-height: 200px; overflow-y: auto;">
-                                                         <t t-foreach="this.props.model.allResources" t-as="res" t-key="res.id">
-                                                             <t t-set="rVal" t-value="state.editingCell.val.find(r => r.resource_id === res.id)"/>
-                                                             <div class="d-flex align-items-center border-bottom py-1 hover-bg-light" style="font-size: 11px;">
-                                                                 <div style="width: 24px; text-align: center;">
-                                                                     <input type="checkbox" style="cursor: pointer;" t-att-checked="!!rVal" t-on-change="(ev) => this.toggleInlineResource(res.id, ev.target.checked)"/>
-                                                                 </div>
-                                                                 <div style="flex: 1; padding-left: 4px; display: flex; align-items: center;">
-                                                                     <i class="fa fa-user-circle text-muted fs-5 me-2"/>
-                                                                     <span class="text-truncate fw-normal text-dark"><t t-esc="res.name"/></span>
-                                                                 </div>
-                                                                 <div style="width: 60px; text-align: center;">
-                                                                     <input t-if="rVal" type="number" class="form-control form-control-sm border-0 bg-transparent text-end px-1" t-att-value="rVal.units" t-on-change="(ev) => this.updateInlineResource(res.id, 'units', ev.target.value)"/>
-                                                                 </div>
-                                                                 <div style="width: 60px; text-align: center;">
-                                                                     <span t-if="rVal" class="text-muted">Default</span>
-                                                                 </div>
+                                                 <div style="max-height: 200px; overflow-y: auto;">
+                                                     <t t-foreach="this.props.model.allResources" t-as="res" t-key="res.id">
+                                                         <t t-set="rVal" t-value="state.editingCell.val.find(r => r.resource_id === res.id)"/>
+                                                         <div class="d-flex align-items-center border-bottom py-1 hover-bg-light" style="font-size: 11px;">
+                                                             <div style="width: 24px; text-align: center;">
+                                                                 <input type="checkbox" style="cursor: pointer;" t-att-checked="!!rVal" t-on-change="(ev) => this.toggleInlineResource(res.id, ev.target.checked)"/>
                                                              </div>
-                                                         </t>
-                                                     </div>
-                                                     <div class="p-2 bg-light text-center border-top">
-                                                         <button class="btn btn-sm btn-primary py-1 px-4 fw-bold me-2" style="font-size: 11px; border-radius: 4px;" t-on-click="this.commitCellEdit">Save</button>
-                                                         <button class="btn btn-sm btn-light border py-1 px-3" style="font-size: 11px; border-radius: 4px;" t-on-click="() => { state.editingCell = null; }">Cancel</button>
-                                                     </div>
-                                                 </t>
+                                                             <div style="flex: 1; padding-left: 4px; display: flex; align-items: center;">
+                                                                 <i class="fa fa-user-circle text-muted fs-5 me-2"/>
+                                                                 <span class="text-truncate fw-normal text-dark"><t t-esc="res.name"/></span>
+                                                             </div>
+                                                             <div style="width: 60px; text-align: center;">
+                                                                 <input t-if="rVal" type="number" class="form-control form-control-sm border-0 bg-transparent text-end px-1" t-att-value="rVal.units" t-on-change="(ev) => this.updateInlineResource(res.id, 'units', ev.target.value)"/>
+                                                             </div>
+                                                             <div style="width: 60px; text-align: center;">
+                                                                 <span t-if="rVal" class="text-muted">Default</span>
+                                                             </div>
+                                                         </div>
+                                                     </t>
+                                                 </div>
+                                                 <div class="p-2 bg-light text-center border-top">
+                                                     <button class="btn btn-sm btn-primary py-1 px-4 fw-bold me-2" style="font-size: 11px; border-radius: 4px;" t-on-click="this.commitCellEdit">Save</button>
+                                                     <button class="btn btn-sm btn-light border py-1 px-3" style="font-size: 11px; border-radius: 4px;" t-on-click="() => { state.editingCell = null; }">Cancel</button>
+                                                 </div>
                                              </div>
                                          </t>
                                          <t t-if="t._resources &amp;&amp; t._resources.length">
-                                             <div class="d-flex align-items-center ms-2" style="padding-left: 8px;">
-                                                 <t t-foreach="t._resources" t-as="ra" t-key="ra.id">
-                                                     <div class="rounded-circle text-white d-flex align-items-center justify-content-center shadow-sm" 
-                                                          t-att-title="ra.resource ? ra.resource.name + (ra.units !== 100 ? ' (' + ra.units + '%)' : '') : ''" 
-                                                          style="width: 24px; height: 24px; font-size: 9px; font-weight: 700; border: 2px solid white; margin-left: -8px; background-color: #64748b; z-index: 1;">
-                                                         <t t-if="ra.resource">
-                                                             <t t-esc="ra.resource.name.substring(0, Math.min(2, ra.resource.name.length)).toUpperCase()"/>
-                                                         </t>
-                                                     </div>
-                                                 </t>
-                                             </div>
+                                             <t t-foreach="t._resources" t-as="ra" t-key="ra.id">
+                                                 <span class="rounded bg-primary text-white d-inline-flex align-items-center justify-content-center me-1 px-1" style="font-size: 9px;" t-att-title="ra.resource ? ra.resource.name : ''">
+                                                     <t t-if="ra.resource"><t t-esc="ra.resource.name"/></t>
+                                                     <t t-if="ra.units !== 100"> <t t-esc="ra.units"/>%</t>
+                                                 </span>
+                                             </t>
                                          </t>
                                          <t t-else="">-</t>
                                      </div>
@@ -1315,7 +1298,7 @@ export class UltimateGanttRenderer extends Component {
                                              </t>
                                          </t>
                                      </t>
-                                     <div t-if="ts" t-attf-class="o_gantt_pill_wrapper o_draggable {{ t.children &amp;&amp; t.children.length > 0 &amp;&amp; !t.is_milestone ? 'o_ug_summary' : '' }} {{ t.children &amp;&amp; t.children.length > 0 &amp;&amp; !t.is_milestone &amp;&amp; t.isCritical &amp;&amp; state.config.gantt_show_critical_path ? 'o_ug_summary_critical' : '' }}" t-att-style="ts + ' overflow: visible !important;'" t-on-mousedown="(ev)=>this.onBMD(ev,t)" t-on-dblclick="() => this.openTaskEditor(t)" t-on-mouseenter="(ev)=>this.onTEnter(t)" t-on-mouseleave="(ev)=>this.onTLeave()">
+                                     <div t-if="ts" t-attf-class="o_gantt_pill_wrapper o_draggable {{ t.children &amp;&amp; t.children.length > 0 &amp;&amp; !t.is_milestone ? 'o_ug_summary' : '' }} {{ t.children &amp;&amp; t.children.length > 0 &amp;&amp; !t.is_milestone &amp;&amp; t.isCritical &amp;&amp; state.config.gantt_show_critical_path ? 'o_ug_summary_critical' : '' }}" t-att-style="ts + ' overflow: visible !important;'" t-on-mousedown="(ev)=>this.onBMD(ev,t)" t-on-dblclick="() => this.openTaskEditor(t)">
 <t t-if="(!t.children || t.children.length === 0) and !t.is_milestone">
                                             <div t-attf-class="o_gantt_pill {{ t.gantt_color ? 'o_ug_custom_color' : '' }} {{ t.isCritical and state.config.gantt_show_critical_path ? 'o_gantt_pill_critical ripple-danger' : 'o_gantt_pill_tan' }} w-100 h-100 d-flex align-items-center" t-att-style="(t.gantt_color &amp;&amp; !(t.isCritical &amp;&amp; state.config.gantt_show_critical_path) ? '--pill-color:' + t.gantt_color + ' !important; background-color:' + t.gantt_color + ' !important; color: #1e293b !important;' : '') + 'height: '+(state.config.gantt_show_baselines ? 13 : (state.config.gantt_row_height - 2*state.config.gantt_bar_margin))+'px !important; margin-top: 0px !important; border-radius: 4px;' + (t.inactive ? ' opacity: 0.5; filter: grayscale(100%);' : '')">
                                                  <div t-if="state.config.gantt_enable_dep_draw" class="o_ug_dep_handle o_ug_handle_l" t-on-mousedown.stop="(ev)=>this.onDepStart(ev,t,'l')"/>
@@ -3561,15 +3544,13 @@ export class UltimateGanttRenderer extends Component {
     }
     onPEnter(t) {
         this.state.hId = t.id;
+        this.state.hoverTask = t;
     }
     onPLeave() {
         this.state.hId = null;
-    }
-    onTEnter(t) {
-        this.state.hoverTask = t;
-    }
-    onTLeave() {
         this.state.hoverTask = null;
+        this.state.hoverBaseline = null;
+        this.state.hoverRollupTask = null;
     }
     onBEnter(ev, t, bIdx) {
         ev.stopPropagation();
