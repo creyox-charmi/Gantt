@@ -16,20 +16,7 @@ class ProjectTask(models.Model):
     
     # Advanced Progress & Effort
     actual_progress = fields.Float("Actual Progress (%)", group_operator="avg")
-    effort = fields.Float("Effort (Hours)", compute="_compute_effort", inverse="_inverse_effort", store=True)
-
-    @api.depends(lambda self: ['allocated_hours'] if hasattr(self.env['project.task'], 'allocated_hours') else [])
-    def _compute_effort(self):
-        for task in self:
-            if hasattr(task, 'allocated_hours'):
-                task.effort = task.allocated_hours
-            else:
-                task.effort = task.effort or 0.0
-
-    def _inverse_effort(self):
-        for task in self:
-            if hasattr(task, 'allocated_hours'):
-                task.allocated_hours = task.effort
+    effort = fields.Float("Effort (Hours)")
     actual_effort = fields.Float("Actual Effort")
     baseline_effort = fields.Float("Baseline Effort")
     duration_variance = fields.Float("Duration Variance")
@@ -151,189 +138,13 @@ class ProjectTask(models.Model):
                 'baseline_end_date': task.date_deadline,
             })
 
-    @api.onchange('allocated_hours', 'ignore_resource_calendar', 'calendar_id', 'planned_date_begin')
-    def _onchange_sync_dates_from_hours(self):
-        for task in self:
-            if not getattr(task, 'planned_date_begin', False) or not hasattr(task, 'allocated_hours'):
-                continue
-                
-            alloc = task.allocated_hours
-            if not alloc:
-                continue
-
-            cal = task.calendar_id or task.project_id.resource_calendar_id or self.env.company.resource_calendar_id
-            if not task.ignore_resource_calendar and cal:
-                new_end = cal.plan_hours(alloc, task.planned_date_begin, compute_leaves=True)
-                if new_end:
-                    task.date_deadline = new_end
-            else:
-                from datetime import timedelta
-                task.date_deadline = task.planned_date_begin + timedelta(hours=alloc)
-
-    @api.onchange('date_deadline')
-    def _onchange_sync_hours_from_dates(self):
-        for task in self:
-            if not getattr(task, 'planned_date_begin', False) or not getattr(task, 'date_deadline', False) or not hasattr(task, 'allocated_hours'):
-                continue
-                
-            cal = task.calendar_id or task.project_id.resource_calendar_id or self.env.company.resource_calendar_id
-            if not task.ignore_resource_calendar and cal:
-                hours = cal.get_work_hours_count(task.planned_date_begin, task.date_deadline, compute_leaves=True)
-                task.allocated_hours = hours
-                task.effort = hours
-            else:
-                hours = (task.date_deadline - task.planned_date_begin).total_seconds() / 3600.0
-                task.allocated_hours = hours
-                task.effort = hours
-
-    @api.model_create_multi
-    def create(self, vals_list):
-        tasks = super(ProjectTask, self).create(vals_list)
-        if not self.env.context.get('skip_sync_dates_hours'):
-            for task in tasks:
-                if getattr(task, 'allocated_hours', False) and task.planned_date_begin and not task.date_deadline:
-                    cal = task.calendar_id or task.project_id.resource_calendar_id or self.env.company.resource_calendar_id
-                    if not task.ignore_resource_calendar and cal:
-                        new_end = cal.plan_hours(task.allocated_hours, task.planned_date_begin, compute_leaves=True)
-                        if new_end:
-                            task.with_context(skip_sync_dates_hours=True).write({'date_deadline': new_end})
-                    else:
-                        from datetime import timedelta
-                        new_end = task.planned_date_begin + timedelta(hours=task.allocated_hours)
-                        task.with_context(skip_sync_dates_hours=True).write({'date_deadline': new_end})
-        return tasks
-
     def write(self, vals):
-        if self.env.context.get('skip_sync_dates_hours'):
-            res = super(ProjectTask, self).write(vals)
-            if 'inactive' in vals:
-                for task in self:
-                    children = self.env['project.task'].search([('parent_id', '=', task.id)])
-                    if children:
-                        children.write({'inactive': vals['inactive']})
-            return res
-
-        # Snapshot old state before writing to detect genuine changes
-        old_state = {}
-        for task in self:
-            old_state[task.id] = {
-                'allocated_hours': getattr(task, 'allocated_hours', 0.0),
-                'effort': getattr(task, 'effort', 0.0),
-                'ignore_resource_calendar': task.ignore_resource_calendar,
-                'calendar_id': task.calendar_id.id if task.calendar_id else False,
-                'planned_date_begin': task.planned_date_begin.strftime('%Y-%m-%d %H:%M:%S') if task.planned_date_begin else '',
-                'date_deadline': task.date_deadline.strftime('%Y-%m-%d %H:%M:%S') if task.date_deadline else '',
-            }
-
         res = super(ProjectTask, self).write(vals)
-
         if 'inactive' in vals:
             for task in self:
                 children = self.env['project.task'].search([('parent_id', '=', task.id)])
                 if children:
                     children.write({'inactive': vals['inactive']})
-
-        # 2-Way Sync: allocated_hours <-> dates
-        from datetime import timedelta
-        for task in self:
-            has_alloc = hasattr(task, 'allocated_hours')
-            if not has_alloc:
-                continue
-
-            old = old_state.get(task.id, {})
-            
-            alloc_hours_new = False
-            alloc_changed = False
-            if 'allocated_hours' in vals and vals['allocated_hours'] != old.get('allocated_hours'):
-                alloc_changed = True
-                alloc_hours_new = vals['allocated_hours']
-            elif 'effort' in vals and vals['effort'] != old.get('effort'):
-                alloc_changed = True
-                alloc_hours_new = vals['effort']
-
-            ignore_changed = 'ignore_resource_calendar' in vals and vals['ignore_resource_calendar'] != old.get('ignore_resource_calendar')
-            calendar_changed = 'calendar_id' in vals and vals.get('calendar_id') != old.get('calendar_id')
-            
-            p_begin_changed = False
-            d_dead_changed = False
-            if 'planned_date_begin' in vals and vals['planned_date_begin']:
-                val_str = vals['planned_date_begin'] if isinstance(vals['planned_date_begin'], str) else vals['planned_date_begin'].strftime('%Y-%m-%d %H:%M:%S')
-                if val_str != old.get('planned_date_begin'): p_begin_changed = True
-            if 'date_deadline' in vals and vals['date_deadline']:
-                val_str = vals['date_deadline'] if isinstance(vals['date_deadline'], str) else vals['date_deadline'].strftime('%Y-%m-%d %H:%M:%S')
-                if val_str != old.get('date_deadline'): d_dead_changed = True
-            dates_changed = p_begin_changed or d_dead_changed
-
-            if alloc_changed:
-                ignore = task.ignore_resource_calendar
-                try:
-                    with open(r'c:\Users\charm\Documents\odoo\odoo-18.0\gantt_debug.txt', 'a') as f:
-                        f.write(f"alloc_changed! alloc_hours_new: {alloc_hours_new}, ignore: {ignore}, has start: {bool(task.planned_date_begin)}\n")
-                except: pass
-                
-                if task.planned_date_begin:
-                    cal = task.calendar_id or task.project_id.resource_calendar_id or self.env.company.resource_calendar_id
-                    if not ignore and cal:
-                        new_end = cal.plan_hours(alloc_hours_new, task.planned_date_begin, compute_leaves=True)
-                        try:
-                            with open(r'c:\Users\charm\Documents\odoo\odoo-18.0\gantt_debug.txt', 'a') as f:
-                                f.write(f"cal.plan_hours result: {new_end}\n")
-                        except: pass
-                        if new_end:
-                            task.with_context(skip_sync_dates_hours=True).write({'date_deadline': new_end})
-                    else:
-                        new_end = task.planned_date_begin + timedelta(hours=alloc_hours_new)
-                        try:
-                            with open(r'c:\Users\charm\Documents\odoo\odoo-18.0\gantt_debug.txt', 'a') as f:
-                                f.write(f"24/7 result: {new_end}\n")
-                        except: pass
-                        task.with_context(skip_sync_dates_hours=True).write({'date_deadline': new_end})
-            elif ignore_changed or calendar_changed:
-                try:
-                    with open(r'c:\Users\charm\Documents\odoo\odoo-18.0\gantt_debug.txt', 'a') as f:
-                        f.write(f"ignore_changed! ignore: {ignore_changed}, cal: {calendar_changed}\n")
-                except: pass
-                if task.planned_date_begin and task.allocated_hours:
-                    cal = task.calendar_id or task.project_id.resource_calendar_id or self.env.company.resource_calendar_id
-                    ignore = task.ignore_resource_calendar
-                    if not ignore and cal:
-                        new_end = cal.plan_hours(task.allocated_hours, task.planned_date_begin, compute_leaves=True)
-                        if new_end:
-                            task.with_context(skip_sync_dates_hours=True).write({'date_deadline': new_end})
-                    else:
-                        new_end = task.planned_date_begin + timedelta(hours=task.allocated_hours)
-                        task.with_context(skip_sync_dates_hours=True).write({'date_deadline': new_end})
-
-            elif dates_changed:
-                try:
-                    with open(r'c:\Users\charm\Documents\odoo\odoo-18.0\gantt_debug.txt', 'a') as f:
-                        f.write(f"dates_changed! p_begin: {p_begin_changed}, d_dead: {d_dead_changed}\n")
-                except: pass
-
-                if task.planned_date_begin and task.allocated_hours:
-                    cal = task.calendar_id or task.project_id.resource_calendar_id or self.env.company.resource_calendar_id
-                    ignore = task.ignore_resource_calendar
-                    if not ignore and cal:
-                        new_end = cal.plan_hours(task.allocated_hours, task.planned_date_begin, compute_leaves=True)
-                        if new_end:
-                            task.with_context(skip_sync_dates_hours=True).write({'date_deadline': new_end})
-                    else:
-                        new_end = task.planned_date_begin + timedelta(hours=task.allocated_hours)
-                        task.with_context(skip_sync_dates_hours=True).write({'date_deadline': new_end})
-
-            elif dates_changed:
-                p_begin = task.planned_date_begin
-                d_dead = task.date_deadline
-                if p_begin and d_dead:
-                    cal = task.calendar_id or task.project_id.resource_calendar_id or self.env.company.resource_calendar_id
-                    ignore = task.ignore_resource_calendar
-                    if not ignore and cal:
-                        hours = cal.get_work_hours_count(p_begin, d_dead, compute_leaves=True)
-                        task.with_context(skip_sync_dates_hours=True).write({'allocated_hours': hours, 'effort': hours})
-                    else:
-                        hours = (d_dead - p_begin).total_seconds() / 3600.0
-                        task.with_context(skip_sync_dates_hours=True).write({'allocated_hours': hours, 'effort': hours})
-
         return res
 
     @api.model

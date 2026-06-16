@@ -1392,6 +1392,13 @@ export class UltimateGanttRenderer extends Component {
                                         <div class="col-3">
                                             <input type="number" class="form-control form-control-sm border-secondary shadow-none" t-model.number="state.editorTask.actual_progress" min="0" max="100" style="border-radius: 6px;"/>
                                         </div>
+                                        <div class="col-2 text-center text-muted" style="font-size: 13px;">Effort</div>
+                                        <div class="col-4">
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control border-secondary shadow-none" t-model.number="state.editorTask.effort" style="border-radius: 6px 0 0 6px; border-right: none;"/>
+                                                <span class="input-group-text bg-white border-secondary text-dark" style="border-radius: 0 6px 6px 0; border-left: none; padding-left: 0; font-size: 13px;">hours</span>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div class="position-relative text-center my-4">
@@ -1413,17 +1420,14 @@ export class UltimateGanttRenderer extends Component {
                                     </div>
 
                                     <div class="row align-items-center mb-3">
-                                        <div class="col-3 text-start text-muted" style="font-size: 13px;">Allocated Time</div>
-                                        <div class="col-9">
+                                        <div class="col-3 text-start text-muted" style="font-size: 13px;">Duration</div>
+                                        <div class="col-3">
                                             <div class="input-group input-group-sm">
-                                                <input type="number" class="form-control border-secondary shadow-none" t-model.number="state.editorTask.effort" style="border-radius: 6px 0 0 6px; border-right: none;"/>
-                                                <span class="input-group-text bg-white border-secondary text-dark" style="border-radius: 0 6px 6px 0; border-left: none; padding-left: 0; font-size: 13px;">hours</span>
+                                                <input type="number" class="form-control border-secondary shadow-none" t-model.number="state.editorTask.duration" style="border-radius: 6px 0 0 6px; border-right: none;"/>
+                                                <span class="input-group-text bg-white border-secondary text-dark" style="border-radius: 0 6px 6px 0; border-left: none; padding-left: 0; font-size: 13px;">days</span>
                                             </div>
                                         </div>
-                                    </div>
-                                    
-                                    <div class="row align-items-center mb-3">
-                                        <div class="col-3 text-start text-muted" style="font-size: 13px;">Color</div>
+                                        <div class="col-2 text-center text-muted" style="font-size: 13px;">Color</div>
                                         <div class="col-4 position-relative">
                                             <t t-if="state.colorDropdownOpen">
                                                 <div class="o_ug_dropdown_backdrop" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1040; cursor: default;" t-on-click.stop.prevent="() => state.colorDropdownOpen = false"></div>
@@ -1926,8 +1930,8 @@ export class UltimateGanttRenderer extends Component {
                         <span class="o_ug_tooltip_val"><t t-esc="state.hoverTask.date_deadline ? state.hoverTask.date_deadline.split(' ')[0] : ''"/></span>
                     </div>
                     <div class="o_ug_tooltip_row">
-                        <span class="o_ug_tooltip_label">Allocated Time:</span>
-                        <span class="o_ug_tooltip_val"><t t-esc="state.hoverTask.effort"/> hours</span>
+                        <span class="o_ug_tooltip_label">Duration:</span>
+                        <span class="o_ug_tooltip_val"><t t-esc="state.hoverTask.real_duration"/></span>
                     </div>
                     <div class="o_ug_tooltip_row" t-if="state.hoverTask.baseline_start_date and state.hoverTask.baseline_start_date != 'False'">
                         <span class="o_ug_tooltip_label">Baseline:</span>
@@ -2183,10 +2187,8 @@ export class UltimateGanttRenderer extends Component {
         } else if (['cost', 'actual_progress', 'effort'].includes(field)) {
             finalVal = parseFloat(val) || 0;
             writeVals[field] = finalVal;
-        } else if (field === 'calendar_id' || field === 'ignore_resource_calendar') {
-            if (field === 'calendar_id') {
-                finalVal = (val === 'false' || !val) ? false : parseInt(val, 10);
-            }
+        } else if (field === 'calendar_id') {
+            finalVal = (val === 'false' || !val) ? false : parseInt(val, 10);
             writeVals[field] = finalVal;
         } else if (field === 'resource_assignment_ids') {
             writeVals[field] = [[5, 0, 0]];
@@ -2587,9 +2589,9 @@ export class UltimateGanttRenderer extends Component {
 
         this.state.editorTask = {
             ...t,
-            planned_date_begin: t.planned_date_begin ? deserializeDateTime(t.planned_date_begin).toFormat("yyyy-MM-dd'T'HH:mm") : null,
-            date_deadline: t.date_deadline ? deserializeDateTime(t.date_deadline).toFormat("yyyy-MM-dd'T'HH:mm") : null,
-            constraint_date: t.constraint_date ? deserializeDateTime(t.constraint_date).toFormat("yyyy-MM-dd'T'HH:mm") : null,
+            planned_date_begin: t.planned_date_begin ? t.planned_date_begin.replace(' ', 'T').substring(0, 16) : null,
+            date_deadline: t.date_deadline ? t.date_deadline.replace(' ', 'T').substring(0, 16) : null,
+            constraint_date: t.constraint_date ? t.constraint_date.replace(' ', 'T').substring(0, 16) : null,
             calendar_id: t.calendar_id ? (Array.isArray(t.calendar_id) ? t.calendar_id[0] : t.calendar_id) : false,
             _preds: [...(t.depend_on_ids || [])],
             _inactive_preds: [...(t.inactive_dependency_ids || [])],
@@ -2691,20 +2693,59 @@ export class UltimateGanttRenderer extends Component {
             if (typeof v === 'number') return v;
             return parseInt(v, 10) || false;
         };
-        const calId = et.ignore_resource_calendar ? false : toCalId(et.calendar_id);
-        const oldCalId = original.ignore_resource_calendar ? false : toCalId(original.calendar_id);
+        const calId = toCalId(et.calendar_id);
+        const oldCalId = toCalId(original.calendar_id);
 
         // --- Calendar-aware date recalculation ---
         const allCals = this.props.model.allCalendars || [];
         const DEFAULT_HOURS = 8;
-        
-        const parseToUTC = (localStr) => {
-            if (!localStr) return false;
-            return serializeDateTime(luxon.DateTime.fromFormat(localStr, "yyyy-MM-dd'T'HH:mm"));
-        };
+        let sStr = et.planned_date_begin.replace('T', ' ') + ':00';
+        let eStr = et.date_deadline.replace('T', ' ') + ':00';
 
-        let sStr = parseToUTC(et.planned_date_begin);
-        let eStr = parseToUTC(et.date_deadline);
+        if (calId !== oldCalId) {
+            try {
+                // 1. Calculate EXACT working hours under the OLD calendar
+                let workingHours = 0;
+                if (oldCalId) {
+                    workingHours = await this.orm.call("resource.calendar", "get_work_hours_count", [[oldCalId], sStr, eStr]);
+                } else {
+                    // Fallback: 24/7 default calendar
+                    const startMs = new Date(sStr.replace(' ', 'T') + 'Z').getTime();
+                    const endMs = new Date(eStr.replace(' ', 'T') + 'Z').getTime();
+                    workingHours = (endMs - startMs) / 3600000;
+                }
+
+                // 2. Schedule those exact working hours on the NEW calendar intervals
+                if (calId && workingHours > 0) {
+                    // plan_hours(hours, day_dt)
+                    const newEndDt = await this.orm.call("resource.calendar", "plan_hours", [[calId], workingHours, sStr]);
+                    if (newEndDt && typeof newEndDt === 'string') {
+                        eStr = newEndDt; // Odoo returns string "YYYY-MM-DD HH:MM:SS"
+                    }
+                } else if (!calId && workingHours > 0) {
+                    // Fallback: map working hours straight to 24/7 clock
+                    const startMs = new Date(sStr.replace(' ', 'T') + 'Z').getTime();
+                    const newEnd = new Date(startMs + workingHours * 3600000);
+                    const pad = n => String(n).padStart(2, '0');
+                    eStr = `${newEnd.getUTCFullYear()}-${pad(newEnd.getUTCMonth() + 1)}-${pad(newEnd.getUTCDate())} ${pad(newEnd.getUTCHours())}:${pad(newEnd.getUTCMinutes())}:00`;
+                }
+            } catch (err) {
+                console.warn("Calendar recalculation via ORM failed, falling back to math:", err);
+                const allCals = this.props.model.allCalendars || [];
+                const oldCalObj = oldCalId ? allCals.find(c => c.id === oldCalId) : null;
+                const newCalObj = calId ? allCals.find(c => c.id === calId) : null;
+                const oldHpd = (oldCalObj && oldCalObj.hours_per_day) ? oldCalObj.hours_per_day : 8;
+                const newHpd = (newCalObj && newCalObj.hours_per_day) ? newCalObj.hours_per_day : 8;
+                if (oldHpd > 0 && newHpd > 0) {
+                    const startMs = new Date(sStr.replace(' ', 'T') + 'Z').getTime();
+                    const endMs = new Date(eStr.replace(' ', 'T') + 'Z').getTime();
+                    const calendarDays = (endMs - startMs) / (24 * 3600000);
+                    const newEnd = new Date(startMs + (calendarDays * oldHpd / newHpd) * 24 * 3600000);
+                    const pad = n => String(n).padStart(2, '0');
+                    eStr = `${newEnd.getUTCFullYear()}-${pad(newEnd.getUTCMonth() + 1)}-${pad(newEnd.getUTCDate())} ${pad(newEnd.getUTCHours())}:${pad(newEnd.getUTCMinutes())}:00`;
+                }
+            }
+        }
 
         // Build base vals — do NOT include sequence here:
         // Writing sequence triggers Odoo's _resequence which shuffles siblings by date.
@@ -2720,7 +2761,7 @@ export class UltimateGanttRenderer extends Component {
             effort: et.effort,
             scheduling_mode: et.scheduling_mode,
             constraint_type: et.constraint_type,
-            constraint_date: parseToUTC(et.constraint_date),
+            constraint_date: et.constraint_date ? et.constraint_date.replace('T', ' ') + ':00' : false,
             manually_scheduled: et.manually_scheduled,
             rollup: et.rollup,
             inactive: et.inactive,
@@ -3481,10 +3522,8 @@ export class UltimateGanttRenderer extends Component {
 
                 if (+newS !== +cur.s) {
                     cur.s = newS;
-                    if (!cur.ignore_resource_calendar) {
-                        if (cur.s.weekday === 6) cur.s = cur.s.plus({ days: 2 }).startOf('day');
-                        else if (cur.s.weekday === 7) cur.s = cur.s.plus({ days: 1 }).startOf('day');
-                    }
+                    if (cur.s.weekday === 6) cur.s = cur.s.plus({ days: 2 }).startOf('day');
+                    else if (cur.s.weekday === 7) cur.s = cur.s.plus({ days: 1 }).startOf('day');
                     cur.e = cur.s.plus({ minutes: cur.dur });
                     changed = true;
                 }
