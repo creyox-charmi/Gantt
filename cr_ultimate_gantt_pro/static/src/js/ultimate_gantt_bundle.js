@@ -2767,6 +2767,9 @@ export class UltimateGanttRenderer extends Component {
             resId = parseInt(et.r_id);
             writeVals.date_start = writeVals.planned_date_begin;
             writeVals.date = writeVals.date_deadline;
+            if (writeVals.effort !== undefined) {
+                writeVals.allocated_hours = writeVals.effort;
+            }
             delete writeVals.planned_date_begin;
             delete writeVals.date_deadline;
             delete writeVals.depend_on_ids;

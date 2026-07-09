@@ -264,7 +264,20 @@ class ProjectTask(models.Model):
                 if val_str != old.get('date_deadline'): d_dead_changed = True
             dates_changed = p_begin_changed or d_dead_changed
 
-            if alloc_changed:
+            # Check Scheduling Modes & Effort Driven logic
+            sync_dates_from_alloc = True
+            sync_alloc_from_dates = True
+            
+            if task.effort_driven:
+                mode = task.scheduling_mode or 'normal'
+                if mode in ('normal', 'fixed_duration', 'fixed_effort'):
+                    sync_dates_from_alloc = False
+                    sync_alloc_from_dates = False
+                elif mode == 'fixed_units':
+                    sync_dates_from_alloc = True
+                    sync_alloc_from_dates = True
+
+            if alloc_changed and sync_dates_from_alloc:
                 ignore = task.ignore_resource_calendar
                 try:
                     with open(r'c:\Users\charm\Documents\odoo\odoo-18.0\gantt_debug.txt', 'a') as f:
@@ -304,24 +317,7 @@ class ProjectTask(models.Model):
                         new_end = task.planned_date_begin + timedelta(hours=task.allocated_hours)
                         task.with_context(skip_sync_dates_hours=True).write({'date_deadline': new_end})
 
-            elif dates_changed:
-                try:
-                    with open(r'c:\Users\charm\Documents\odoo\odoo-18.0\gantt_debug.txt', 'a') as f:
-                        f.write(f"dates_changed! p_begin: {p_begin_changed}, d_dead: {d_dead_changed}\n")
-                except: pass
-
-                if task.planned_date_begin and task.allocated_hours:
-                    cal = task.calendar_id or task.project_id.resource_calendar_id or self.env.company.resource_calendar_id
-                    ignore = task.ignore_resource_calendar
-                    if not ignore and cal:
-                        new_end = cal.plan_hours(task.allocated_hours, task.planned_date_begin, compute_leaves=True)
-                        if new_end:
-                            task.with_context(skip_sync_dates_hours=True).write({'date_deadline': new_end})
-                    else:
-                        new_end = task.planned_date_begin + timedelta(hours=task.allocated_hours)
-                        task.with_context(skip_sync_dates_hours=True).write({'date_deadline': new_end})
-
-            elif dates_changed:
+            elif dates_changed and sync_alloc_from_dates:
                 p_begin = task.planned_date_begin
                 d_dead = task.date_deadline
                 if p_begin and d_dead:
